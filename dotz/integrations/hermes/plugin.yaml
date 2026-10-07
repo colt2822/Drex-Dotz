@@ -1,0 +1,12 @@
+name: drex-dotz
+label: Drex Dotz Hermes Integration
+version: 0.1.0
+description: Persistent autonomous workers with bounded Drex capabilities.
+provides_tools:
+  - dots_list
+  - dots_create
+  - dots_assign
+  - dots_status
+  - dots_result
+  - dots_stop
+  - dots_history

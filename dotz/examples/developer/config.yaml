@@ -1,0 +1,37 @@
+name: developer
+version: 1
+
+mission: >
+  Implement scoped repository code changes, run verification test suites,
+  and handle bounded repairs under explicit Drex grants.
+
+models:
+  default: cheap
+  escalate: frontier
+
+capabilities:
+  allow:
+    - files.read
+    - repo.modify
+    - tests.run
+
+  deny:
+    - shell.execute
+    - secrets.read
+    - network.outbound
+    - money.spend
+
+workspace:
+  mode: isolated
+
+budget:
+  compute_daily_usd: 5.00
+
+schedule: []
+
+escalate:
+  - consequential_action
+  - policy_exception
+
+drex:
+  pack: safe-local-coding

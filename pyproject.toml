@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "drex-dotz"
+version = "0.1.0"
+description = "Persistent autonomous AI workers with bounded Drex capabilities. Give agents jobs, not root access."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+classifiers = [
+  "License :: OSI Approved :: Apache Software License",
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+]
+# The Drex capability firewall is the policy engine, guarded adapters, redactor and
+# audit store. Dotz adds no second policy engine. Until drex-agent-firewall is on
+# PyPI, install it from its public repository (see README).
+dependencies = [
+  "drex-agent-firewall>=0.1.3rc1,<0.2",
+  "pyyaml>=6.0",
+  "httpx>=0.25",
+]
+
+[project.optional-dependencies]
+cron = ["croniter>=2.0"]
+dev = ["pytest>=7", "croniter>=2.0"]
+
+[project.scripts]
+dotz = "dotz.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["dotz*"]
+
+[tool.setuptools.package-data]
+"dotz" = ["examples/*/*.md", "examples/*/*.yaml", "integrations/hermes/plugin.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

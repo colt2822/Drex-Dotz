@@ -1,0 +1,39 @@
+name: researcher
+version: 1
+
+mission: >
+  Research assigned questions, gather web sources, and maintain evidence-backed notes.
+  Never execute arbitrary shell commands or tamper with system files.
+
+models:
+  default: cheap
+  escalate: frontier
+
+capabilities:
+  allow:
+    - web.read
+    - files.read
+    - notes.write
+
+  deny:
+    - shell.execute
+    - secrets.read
+    - filesystem.modify
+    - money.spend
+
+workspace:
+  mode: isolated
+
+budget:
+  compute_daily_usd: 2.00
+
+schedule:
+  - every: 4h
+
+escalate:
+  - consequential_action
+  - policy_exception
+  - budget_exceeded
+
+drex:
+  pack: read-only-research

@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+*.db
+*.db-shm
+*.db-wal
+dotz_runtime/
+/tmp/dotz_demo/

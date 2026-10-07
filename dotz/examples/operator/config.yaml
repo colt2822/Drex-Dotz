@@ -1,0 +1,38 @@
+name: operator
+version: 1
+
+mission: >
+  Inspect system health, monitor services, and review runtime logs.
+  Execute bounded diagnostics while preventing generic root shell access.
+
+models:
+  default: cheap
+  escalate: frontier
+
+capabilities:
+  allow:
+    - services.inspect
+    - logs.read
+    - diagnostics.run
+
+  deny:
+    - shell.execute
+    - filesystem.modify
+    - secrets.read
+    - money.spend
+
+workspace:
+  mode: isolated
+
+budget:
+  compute_daily_usd: 3.00
+
+schedule:
+  - every: 1h
+
+escalate:
+  - service_failure
+  - policy_exception
+
+drex:
+  pack: production-ops

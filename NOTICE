@@ -1,0 +1,6 @@
+Drex Dotz
+Copyright 2026 Drex Dotz Contributors
+
+This product includes software developed at Drex Dotz.
+Portions of the persistence and event delivery design are adapted from drex-pr-shepherd (Apache-2.0).
+Drex capability enforcement and guarded adapters are powered by drex-agent-firewall (MIT).
