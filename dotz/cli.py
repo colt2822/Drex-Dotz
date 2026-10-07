@@ -153,56 +153,58 @@ def cmd_tick(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(prog="dotz", description="Drex Dotz: Persistent autonomous workers with bounded Drex capabilities")
-    parser.add_argument("--dir", default=None, help="Root runtime directory (default: ./dotz_runtime)")
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--dir", default=None, help="Root runtime directory (default: ./dotz_runtime)")
+
+    parser = argparse.ArgumentParser(prog="dotz", description="Drex Dotz: Persistent autonomous workers with bounded Drex capabilities", parents=[common])
     parser.add_argument("--version", action="version", version=f"drex-dotz {__version__}")
     sub = parser.add_subparsers(dest="cmd")
 
-    p_init = sub.add_parser("init", help="Initialize Dotz runtime environment")
+    p_init = sub.add_parser("init", help="Initialize Dotz runtime environment", parents=[common])
     p_init.set_defaults(func=cmd_init)
 
-    p_list = sub.add_parser("list", help="List registered Dots")
+    p_list = sub.add_parser("list", help="List registered Dots", parents=[common])
     p_list.set_defaults(func=cmd_list)
 
-    p_show = sub.add_parser("show", help="Show Dot details and capabilities")
+    p_show = sub.add_parser("show", help="Show Dot details and capabilities", parents=[common])
     p_show.add_argument("name", help="Name of Dot")
     p_show.set_defaults(func=cmd_show)
 
-    p_run = sub.add_parser("run", help="Start and run a Dot")
+    p_run = sub.add_parser("run", help="Start and run a Dot", parents=[common])
     p_run.add_argument("name", help="Name of Dot")
     p_run.set_defaults(func=cmd_run)
 
-    p_assign = sub.add_parser("assign", help="Assign a task to a Dot")
+    p_assign = sub.add_parser("assign", help="Assign a task to a Dot", parents=[common])
     p_assign.add_argument("name", help="Name of Dot")
     p_assign.add_argument("task", help="Task description")
     p_assign.add_argument("--exec", action="store_true", help="Execute immediately")
     p_assign.set_defaults(func=cmd_assign)
 
-    p_status = sub.add_parser("status", help="Get Dot status")
+    p_status = sub.add_parser("status", help="Get Dot status", parents=[common])
     p_status.add_argument("name", help="Name of Dot")
     p_status.set_defaults(func=cmd_status)
 
-    p_stop = sub.add_parser("stop", help="Stop a Dot")
+    p_stop = sub.add_parser("stop", help="Stop a Dot", parents=[common])
     p_stop.add_argument("name", help="Name of Dot")
     p_stop.set_defaults(func=cmd_stop)
 
-    p_history = sub.add_parser("history", help="Show Drex capability receipts")
+    p_history = sub.add_parser("history", help="Show Drex capability receipts", parents=[common])
     p_history.add_argument("name", help="Name of Dot")
     p_history.add_argument("--limit", type=int, default=20, help="Max records")
     p_history.set_defaults(func=cmd_history)
 
-    p_events = sub.add_parser("events", help="List recent event records")
+    p_events = sub.add_parser("events", help="List recent event records", parents=[common])
     p_events.add_argument("--limit", type=int, default=20, help="Max records")
     p_events.set_defaults(func=cmd_events)
 
-    p_emit = sub.add_parser("emit", help="Emit an event")
+    p_emit = sub.add_parser("emit", help="Emit an event", parents=[common])
     p_emit.add_argument("type", help="Event type")
     p_emit.add_argument("--source", default="cli", help="Source identifier")
     p_emit.add_argument("--subject", default=None, help="Subject identifier")
     p_emit.add_argument("--payload", default=None, help="JSON payload")
     p_emit.set_defaults(func=cmd_emit)
 
-    p_tick = sub.add_parser("tick", help="Run scheduler tick")
+    p_tick = sub.add_parser("tick", help="Run scheduler tick", parents=[common])
     p_tick.set_defaults(func=cmd_tick)
 
     args = parser.parse_args()
