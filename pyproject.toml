@@ -18,7 +18,7 @@ classifiers = [
 # audit store. Dotz adds no second policy engine. Until drex-agent-firewall is on
 # PyPI, install it from its public repository (see README).
 dependencies = [
-  "drex-agent-firewall>=0.1.3rc1,<0.2",
+  "drex-agent-firewall @ git+https://github.com/colt2822/Drex-Agent-Firewall.git@v0.1.3",
   "pyyaml>=6.0",
   "httpx>=0.25",
 ]
@@ -38,3 +38,4 @@ include = ["dotz*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]

@@ -11,7 +11,7 @@ Audit date: 2026-10-06. Sources inspected on the local machine (current source, 
 | **DREX-MCP** | `Drex-MCP` | project author | MIT | yes |
 | **HERMES** | `hermes-agent` (NousResearch, `cron/`, `plugins/`, `hermes_cli/projects_db`) | Nous Research | MIT | yes (third-party) |
 | **NOVA** | `nova/router`, NOVA Responses endpoint, `nova-harness` profile plugin | private | proprietary | **no** |
-| **PRIVATE** | `ELYRAON-CONTROL`, FETT, trading/copy-trader, lead engine, Money/Treasury prompts | private | proprietary | **no** |
+| **PRIVATE** | Internal execution controls, proprietary engines, lead engine, private prompts | private | proprietary | **no** |
 
 Reuse classes: `REUSE_AS_IS` (imported unchanged as a dependency), `WRAP_EXISTING` (thin adapter around unchanged code),
 `EXTRACT_GENERIC` (author-owned generic logic copied/adapted into Dotz), `SMALL_EXTENSION` (small new code on top of a reused primitive),

@@ -9,3 +9,5 @@ __pycache__/
 *.db-wal
 dotz_runtime/
 /tmp/dotz_demo/
+build/
+dist/
