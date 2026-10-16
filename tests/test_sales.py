@@ -299,3 +299,43 @@ def test_classifier_edge_cases():
     assert classify_inbound(m)["kind"] == "REPLY"
     m = inbound("x", "a@b.example", "STOP", "stop emailing us")
     assert classify_inbound(m)["kind"] == "OPT_OUT"
+
+
+# ---- v1.1: provider ceiling, bounce classification, reconcile ------------------------------------
+def test_live_policy_provider_ceiling_500_keeps_owner_target():
+    p = Policy()
+    v = p.cfg["volume"]
+    assert v["account_rolling_24h_cap"] == 1800                           # owner target retained for later
+    assert v["google_account_limit"] == 500 and p.effective_cap() == 500  # billing activation does not raise the ceiling
+    assert p.sales_budget(0) == 300 and p.sales_budget(62) == 238         # 500 - 200 reserve - account sends
+    assert p.sales_budget(400) == 0
+
+
+def test_nxdomain_dsn_is_permanent_and_notifications_are_not_replies():
+    dsn = inbound("d1", "mailer-daemon@googlemail.com", "Delivery Status Notification (Failure)",
+                  "** Address not found **\nYour message wasn't delivered to partnerships@aenfinite.us because the domain aenfinite.us couldn't be found.\n"
+                  "DNS Error: DNS type 'mx' lookup of aenfinite.us responded with code NXDOMAIN\nDomain name not found: aenfinite.us")
+    k = classify_inbound(dsn)
+    assert k["kind"] == "BOUNCE" and k["hard"] and k["recipient"] == "partnerships@aenfinite.us" and not k["reputation"]
+    for sender in ("workspace-noreply@google.com", "payments-noreply@google.com", "updates@email.grok.com", "no-reply@accounts.google.com"):
+        assert classify_inbound(inbound("n", sender, "Welcome", "hello"))["kind"] == "AUTO"
+    assert classify_inbound(inbound("t", "colt2822@gmail.com", "ELYRAON Business Email — Delivery Test", "test"))["kind"] == "INTERNAL_TEST"
+    assert classify_inbound(inbound("r", "owner@acmeroofing.com", "Re: Estimates", "Sounds interesting, call me"))["kind"] == "REPLY"
+
+
+def test_reconcile_fixes_kinds_and_links_threads_without_inventing_replies(env):
+    from dotz.sales import reconcile
+    w, s, g, pol, tmp = env
+    s.c.execute("INSERT INTO sales_inbound VALUES('x1','REPLY',NULL,'human reply','2026-10-16T00:00:00')")
+    s.c.execute("INSERT INTO sales_inbound VALUES('x2','BOUNCE_SOFT','p1','unknown','2026-10-16T00:00:00')")
+    s.c.commit()
+    plan = {"thread_links": [], "inbound_changes": [
+        {"id": "x1", "old": "REPLY", "new": "AUTO", "detail": "auto-reply", "recipient": None},
+        {"id": "x2", "old": "BOUNCE_SOFT", "new": "BOUNCE_HARD", "detail": "5.1.2", "recipient": "gone@nxdomain-example.us"}]}
+    assert reconcile.apply(s, plan)["inbound_reclassified"] == 2
+    assert reconcile.apply(s, {"thread_links": [], "inbound_changes": []})["inbound_reclassified"] == 0
+    assert s.c.execute("SELECT kind FROM sales_inbound WHERE provider_message_id='x1'").fetchone()[0] == "AUTO"
+    assert s.c.execute("SELECT kind FROM sales_inbound WHERE provider_message_id='x2'").fetchone()[0] == "BOUNCE_HARD"
+    assert s.is_suppressed("gone@nxdomain-example.us")
+    assert s.c.execute("SELECT count(*) FROM sales_inbound_audit WHERE provider_message_id IN ('x1','x2')").fetchone()[0] == 2           # originals preserved
+    assert reconcile._norm("Story.Remodeling+x@gmail.com") == reconcile._norm("storyremodeling@gmail.com")

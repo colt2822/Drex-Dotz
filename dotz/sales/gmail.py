@@ -242,6 +242,7 @@ class Gmail:
 # ---- classification (pure functions; unit/fixture testable) ----------------
 _OPT_OUT = re.compile(r"\b(unsubscribe|opt[- ]?out|remove me|stop (emailing|contacting|sending)|do not (contact|email)|"
                       r"don'?t (contact|email)|take me off|no more emails?)\b", re.I)
+INTERNAL_SENDERS = {"colt2822@gmail.com", ACCOUNT.casefold()}  # owner canaries/tests are never prospect replies
 _BOUNCE_SENDERS = ("mailer-daemon@", "postmaster@")
 _COMPLAINT = re.compile(r"\b(spam|report(ed)? (this|you)|abuse|harass|illegal|cease and desist|lawyer|attorney)\b", re.I)
 
@@ -262,6 +263,8 @@ def classify_inbound(m: dict) -> dict:
     system_sender = bool(re.match(r"(no-?reply|do-?not-?reply|notify|notifications?|payments-|updates@|mailer|bounce|newsletter|workspace-)", sender))
     auto = system_sender or str(m["headers"].get("Auto-Submitted", "")).lower() not in ("", "no") or \
         "out of office" in text.lower() or "automatic reply" in text.lower()
+    if sender in INTERNAL_SENDERS:
+        return {"kind": "INTERNAL_TEST", "recipient": sender, "detail": "owner/internal mail, not a prospect reply"}
     if _COMPLAINT.search(text):
         return {"kind": "COMPLAINT", "recipient": sender, "detail": "complaint language"}
     if _OPT_OUT.search(m["text"][:600] + " " + m["subject"]):

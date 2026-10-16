@@ -35,9 +35,11 @@ schedule:
   end_hour: 16
 volume:
   # No daily ramp-up. Sending is sustained and paced across the remaining window.
-  account_rolling_24h_cap: 2000          # owner-configured maximum of ALL account messages per rolling 24h
-  google_account_limit: 2000             # Google's per-user limit for a paid Workspace account (owner confirmed paid business account)
-  reserve_for_transactional_and_manual: 200   # never consumed by Sales Dot (Stripe fulfillment emails, owner mail, replies)
+  # effective cap = min(owner target, provider limit). Raise google_account_limit ONLY after Google's Admin console/docs
+  # confirm a higher per-user limit for this account; billing activation (2026-11-01) is not evidence of a higher limit.
+  account_rolling_24h_cap: 1800          # owner-configured target of ALL account messages per rolling 24h (retained for when the provider limit allows it)
+  google_account_limit: 500              # current safe provider ceiling: Workspace Business Starter trial (ends 2026-10-28, billing starts 2026-11-01)
+  reserve_for_transactional_and_manual: 200   # never consumed by Sales Dot (Stripe fulfillment emails, owner mail, replies); leaves 300 for sales
   pacing: {min_spacing_seconds: 8, max_spacing_seconds: 300, jitter: 0.2, tick_budget_seconds: 50}
 pause_conditions:                        # automatic, time-boxed; Google enforcement is never bypassed
   provider_throttle_backoff_seconds: [900, 1800, 3600, 7200, 21600, 86400]

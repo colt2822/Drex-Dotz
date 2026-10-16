@@ -269,20 +269,24 @@ def sender_exec(ctx: Ctx, payload: dict) -> dict:
     iso = lambda t: time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(t))
     sales_24h = c.execute("SELECT count(*) FROM sales_send_intents WHERE status IN ('INTENT','SENT') AND policy_hash!='historic' AND created_at>=?", (iso(now - 86400),)).fetchone()[0]
     vals = {k: st(k) for k in ("emergency_stop", "pause_until", "pause_reason", "last_reply_sync")}
+    bounces = [dict(r) for r in c.execute("SELECT i.provider_message_id AS dsn, i.kind, i.prospect_id, i.detail, i.processed_at, "
+                                          "(SELECT reason FROM sales_suppressions s WHERE s.email=(SELECT recipient FROM sales_send_intents x WHERE x.prospect_id=i.prospect_id LIMIT 1)) AS suppression "
+                                          "FROM sales_inbound i WHERE i.kind LIKE 'BOUNCE%' ORDER BY i.processed_at DESC LIMIT 20")]
     c.close()
     v = pol.cfg["volume"]
     return {"heartbeat_age_s": (now - float(hb)) if hb else None, "policy_hash": pol.hash[:12], "policy_approved": bool(ap), "categories": ap and ap["categories"],
             "emergency_stop": vals["emergency_stop"], "stop_file": (STATE_DIR / "STOP").exists(), "paused_until": float(vals["pause_until"] or 0) or None, "pause_reason": vals["pause_reason"],
             "in_window": pol.in_window(now), "window": "Mon-Fri 09:00-16:00 America/Chicago",
-            "quota": {"effective_cap_24h": pol.effective_cap(), "reserve": v["reserve_for_transactional_and_manual"], "sales_budget_if_idle": pol.sales_budget(0),
+            "quota": {"effective_cap_24h": pol.effective_cap(), "owner_target_24h": v["account_rolling_24h_cap"], "provider_limit_24h": v["google_account_limit"],
+                      "limited_by": "provider" if v["google_account_limit"] < v["account_rolling_24h_cap"] else "owner", "reserve": v["reserve_for_transactional_and_manual"], "sales_budget_if_idle": pol.sales_budget(0),
                       "sales_sent_24h": sales_24h, "account_sends_24h_cached": acct, "sales_budget_left_est": pol.sales_budget(acct["n"]) if acct else None},
-            "last_tick": tick, "last_reply_sync": vals["last_reply_sync"]}
+            "bounces": bounces, "last_tick": tick, "last_reply_sync": vals["last_reply_sync"]}
 
 
 def sender_verify(ctx: Ctx, payload: dict, r: dict) -> list[dict]:
     q = r["quota"]
     return [{"check": "sender heartbeat < 180s old", "ok": r["heartbeat_age_s"] is not None and r["heartbeat_age_s"] < 180, "age_s": r["heartbeat_age_s"]},
-            {"check": "1800/day sales allocation preserved (2000 cap - 200 reserve)", "ok": q["sales_budget_if_idle"] == 1800 and q["reserve"] == 200},
+            {"check": "effective cap never above provider limit; sales = cap - reserve", "ok": q["effective_cap_24h"] <= q["provider_limit_24h"] and q["sales_budget_if_idle"] == max(0, q["effective_cap_24h"] - q["reserve"]) and q["reserve"] == 200},
             {"check": "policy approval matches current policy hash", "ok": r["policy_approved"]}]
 
 

@@ -77,6 +77,11 @@ def cmd_run(a):
     W.run_loop(make_worker, a.interval)
 
 
+def cmd_reconcile(a):
+    from dotz.sales import reconcile
+    print(json.dumps(reconcile.run(a.execute), indent=1, default=str))
+
+
 def cmd_canary(a):
     """One internal canary to the business mailbox itself. Requires the explicit flag."""
     if a.authorize != "SEND-ONE-CANARY-TO-COLT@ELYRAON.COM.CO":
@@ -133,6 +138,7 @@ def main():
     sp.add_parser("resume").set_defaults(f=cmd_resume)
     sp.add_parser("tick").set_defaults(f=cmd_tick)
     x = sp.add_parser("run"); x.add_argument("--interval", type=int, default=60); x.set_defaults(f=cmd_run)
+    x = sp.add_parser("reconcile"); x.add_argument("--execute", action="store_true", help="apply (default is a dry-run plan)"); x.set_defaults(f=cmd_reconcile)
     x = sp.add_parser("canary"); x.add_argument("--authorize", default=""); x.set_defaults(f=cmd_canary)
     sp.add_parser("prove-crm").set_defaults(f=cmd_prove_crm)
     a = ap.parse_args()

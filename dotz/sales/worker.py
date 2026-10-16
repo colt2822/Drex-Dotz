@@ -339,7 +339,7 @@ class SalesWorker:
                     self.s.suppress_prospect(sender_pid, f"{kind} reply via Gmail {mid}")
                 if kind == "COMPLAINT":
                     self.stop(f"complaint language in reply {mid}")
-            elif kind == "AUTO":
+            elif kind in ("AUTO", "INTERNAL_TEST"):
                 stats["auto"] += 1
             else:
                 stats["reply"] += 1
@@ -469,7 +469,7 @@ class SalesWorker:
                 break
             gap = self.spacing(left)
             last = self.s.c.execute("SELECT max(created_at) FROM sales_send_intents WHERE status IN ('INTENT','SENT') AND policy_hash!='historic'").fetchone()[0]
-            wait = gap - (self.now() - datetime.fromisoformat(last).replace(tzinfo=ZoneInfo("UTC")).timestamp()) if last else 0
+            wait = gap + 1 - (self.now() - datetime.fromisoformat(last).replace(tzinfo=ZoneInfo("UTC")).timestamp()) if last else 0
             if wait > 0:
                 if self.now() - t0 + wait > tick_budget:
                     last_reason = f"pacing: next send in {int(wait)}s"
