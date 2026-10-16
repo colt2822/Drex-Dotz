@@ -1,0 +1,16 @@
+[Unit]
+Description=Drex Fleet supervisor (durable task queue, leased workers, verified adapters; never sends mail)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/drex-dotz
+ExecStart=%h/drex-dotz/.venv/bin/python -m dotz.fleet run
+Restart=always
+RestartSec=10
+TimeoutStopSec=40
+Nice=10
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,8 @@
+{"elements":[
+{"type":"node","id":1,"tags":{"name":"Lone Star Air","craft":"hvac","website":"http://www.lonestarair.example/","addr:city":"Austin","addr:state":"TX","phone":"+1 512 555 0100","contact:email":"info@lonestarair.example"}},
+{"type":"way","id":2,"tags":{"name":"Lone Star Air (shop 2)","craft":"hvac","website":"https://lonestarair.example/about","addr:state":"TX"}},
+{"type":"node","id":3,"tags":{"name":"Big Chain HVAC","craft":"hvac","website":"https://bigchain.example","brand":"Big Chain","brand:wikidata":"Q1","addr:state":"TX"}},
+{"type":"node","id":4,"tags":{"name":"No Site Co","craft":"hvac","addr:state":"TX"}},
+{"type":"node","id":5,"tags":{"name":"Facebook Only","craft":"hvac","website":"https://www.facebook.com/foo","addr:state":"TX"}},
+{"type":"node","id":6,"tags":{"name":"Wrong State","craft":"hvac","website":"https://ok.example","addr:state":"OK"}}
+]}

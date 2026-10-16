@@ -1,0 +1,63 @@
+# Discovery v2 settings. Safe to edit: not covered by the owner-approved policy hash.
+# Sending policy (hours, caps, content rules, categories) stays in ../policy.yaml and is untouched.
+legacy_discovery: false        # old single-thread Luna search step in the sender tick (leaked aggregators); v2 replaces it
+user_agent: "ELYRAON-research/1.0 (+https://elyraon.com.co; contact colt@elyraon.com.co)"
+
+net:
+  per_host_min_interval_s: 3.0
+  timeout_s: 15
+  retries: 2
+  max_body_bytes: 1500000
+  robots_ttl_s: 21600
+
+enrich:
+  workers: 8
+  batch: 40
+  pages_per_site: 5
+  recheck_after_days: 30
+
+sources:
+  osm:
+    enabled: true
+    endpoint: https://overpass-api.de/api/interpreter
+    block_cooldown_s: 240
+    min_interval_s: 20          # Overpass fair use: one query at a time, spaced
+    timeout_s: 120
+  search:
+    enabled: true               # DuckDuckGo HTML endpoint; auto-disabled with cooldown when it blocks us (never spoofed around)
+    endpoint: https://html.duckduckgo.com/html/
+    min_interval_s: 30
+    block_cooldown_s: 21600
+  directory:
+    enabled: true               # chamber / association member pages listed below (robots-checked)
+    min_interval_s: 10
+    max_pages_per_job: 8
+    pages: []
+
+# Verticals ELYRAON can plausibly serve; weight feeds fit + job allocation. osm = Overpass tag filters.
+categories:
+  hvac:        {weight: 1.00, osm: ['craft=hvac'], keywords: ["hvac", "heating and cooling", "air conditioning", "furnace"]}
+  plumbing:    {weight: 1.00, osm: ['craft=plumber'], keywords: ["plumbing", "plumber", "drain", "water heater"]}
+  electrical:  {weight: 0.95, osm: ['craft=electrician'], keywords: ["electrician", "electrical contractor", "electrical service"]}
+  roofing:     {weight: 0.95, osm: ['craft=roofer'], keywords: ["roofing", "roofer", "roof repair", "roof replacement"]}
+  restoration: {weight: 0.90, osm: [], keywords: ["water damage restoration", "fire damage restoration", "mold remediation"]}
+  property_management: {weight: 0.85, osm: ['office=property_management'], keywords: ["property management", "property manager"]}
+  automotive:  {weight: 0.80, osm: ['shop=car_repair'], keywords: ["auto repair", "auto body", "collision repair", "automotive service"]}
+  landscaping: {weight: 0.80, osm: ['craft=gardener'], keywords: ["landscaping", "lawn care", "landscape contractor"]}
+  commercial_cleaning: {weight: 0.80, osm: [], keywords: ["commercial cleaning", "janitorial services"]}
+
+# Region expansion order: home market first, then national as earlier jobs saturate.
+regions: [TX, FL, GA, NC, TN, AZ, CO, OH, IL, PA, MI, VA, SC, AL, MO, IN, WA, OR, NV, UT, OK, LA, KY, MN, WI, MD, NJ, CA, NY, MA]
+
+search_pain_terms: ["emergency service 24/7", "request a quote", "schedule service", "now hiring", "free estimate"]
+
+ranking:
+  assumed_deal_value_usd: 1500     # ESTIMATE ONLY: placeholder for a small automation project, not observed revenue
+  assumed_close_rate: 0.01         # ESTIMATE ONLY: no replies yet (60 sends, 0 replies) so no observed rate exists
+  min_fit_to_qualify: 60
+  min_contact_confidence: 60
+
+promotion:
+  enabled: false                   # staging only until the owner/operator inspects a batch
+  max_per_day: 25                  # also bounded by policy discovery.max_new_prospects_per_day
+  min_rank: 55

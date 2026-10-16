@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DREX FLEET COMMAND</title>
+<style>
+:root{--bg:#0a0a0b;--panel:#141416;--panel2:#1c1c1f;--line:#2c2c30;--ink:#e9e6da;--dim:#8d8b82;--sig:#ffd400;--sigd:#8a7300;--bad:#ff4d3d;--ok:#6fdc6f;--unk:#6f7ba0;
+--mono:"JetBrains Mono","IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.45 var(--mono)}
+body{background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px)}
+header{display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:2px solid var(--sig);background:#000;position:sticky;top:0;z-index:5;flex-wrap:wrap}
+.logo{font-weight:800;letter-spacing:.22em;color:var(--sig);font-size:15px}.logo small{display:block;color:var(--dim);letter-spacing:.18em;font-weight:400;font-size:9px}
+nav{display:flex;gap:2px;flex-wrap:wrap}nav a{color:var(--dim);text-decoration:none;padding:7px 14px;border:1px solid var(--line);letter-spacing:.16em;font-size:11px;text-transform:uppercase}
+nav a.on{background:var(--sig);color:#000;border-color:var(--sig);font-weight:700}
+.stat{margin-left:auto;text-align:right;font-size:11px;color:var(--dim)}.stat b{color:var(--sig)}
+.stripe{height:6px;background:repeating-linear-gradient(135deg,var(--sig) 0 10px,#000 10px 20px)}
+main{padding:16px;max-width:1500px;margin:0 auto}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}.grid.w2{grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);padding:12px 14px;position:relative}
+.card:before,.card:after{content:"";position:absolute;width:9px;height:9px;border:2px solid var(--sig)}.card:before{top:-1px;left:-1px;border-right:0;border-bottom:0}.card:after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+h2{margin:18px 0 8px;font-size:11px;letter-spacing:.24em;color:var(--sig);text-transform:uppercase;font-weight:700}h2:first-child{margin-top:0}
+.k{color:var(--dim);font-size:10px;letter-spacing:.16em;text-transform:uppercase}.v{font-size:28px;font-weight:700;margin:2px 0;color:var(--ink)}.v.sm{font-size:18px}
+.src{color:var(--dim);font-size:10px;margin-top:4px}
+.tag{display:inline-block;padding:0 6px;font-size:10px;letter-spacing:.12em;border:1px solid;margin-left:6px;vertical-align:middle}
+.t-ok{color:var(--ok);border-color:var(--ok)}.t-bad{color:var(--bad);border-color:var(--bad)}.t-stale{color:#000;background:var(--sig);border-color:var(--sig)}.t-unk{color:var(--unk);border-color:var(--unk)}.t-no{color:var(--dim);border-color:var(--line)}
+table{width:100%;border-collapse:collapse;font-size:12px}th{text-align:left;color:var(--dim);font-weight:400;font-size:10px;letter-spacing:.14em;text-transform:uppercase;border-bottom:1px solid var(--line);padding:4px 6px}
+td{padding:5px 6px;border-bottom:1px solid #202023;vertical-align:top;word-break:break-word}
+.q{color:var(--dim);font-style:italic}.bar{height:6px;background:var(--panel2);margin-top:5px}.bar i{display:block;height:100%;background:var(--sig)}
+pre{white-space:pre-wrap;margin:0;font-size:11px;color:var(--dim);max-height:220px;overflow:auto}
+.dim{color:var(--dim)}.bad{color:var(--bad)}.ok{color:var(--ok)}.sig{color:var(--sig)}
+footer{padding:14px 16px;color:var(--dim);font-size:10px;letter-spacing:.1em;border-top:1px solid var(--line)}
+@media(max-width:600px){main{padding:10px}.grid.w2{grid-template-columns:1fr}.v{font-size:22px}}
+</style></head><body>
+<header><div class="logo">DREX FLEET COMMAND<small>ELYREON // READ-ONLY // LOCALHOST</small></div>
+<nav id="nav"></nav><div class="stat" id="stat">connecting…</div></header><div class="stripe"></div>
+<main id="main"></main><footer>REAL DATA ONLY · UNKNOWN = no source wired · STALE = older than the metric's freshness bound · auto-refresh 10 s · GET-only, no controls</footer>
+<script>
+const VIEWS=["overview","dots","sales","system"];let view=(location.hash||"#overview").slice(1);if(!VIEWS.includes(view))view="overview";
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const age=s=>s==null?"never":s<90?Math.round(s)+"s":s<5400?Math.round(s/60)+"m":s<172800?(s/3600).toFixed(1)+"h":Math.round(s/86400)+"d";
+const N=v=>v==null?"—":Number(v).toLocaleString();
+let NOW=Date.now()/1000;
+function fresh(asof,bound){if(asof==null)return `<span class="tag t-unk">UNKNOWN</span>`;const a=NOW-asof;return a>bound?`<span class="tag t-stale">STALE ${age(a)}</span>`:`<span class="tag t-ok">${age(a)} ago</span>`}
+function card(k,v,src,asof,bound,cls){return `<div class="card"><div class="k">${esc(k)}</div><div class="v ${cls||""}">${v==null?'<span class="dim">UNKNOWN</span>':esc(v)}</div><div class="src">${esc(src)} ${asof===undefined?"":fresh(asof,bound)}</div></div>`}
+function unk(k,why){return `<div class="card"><div class="k">${esc(k)}</div><div class="v"><span class="dim">UNKNOWN</span></div><div class="src">${esc(why)} <span class="tag t-unk">NO SOURCE</span></div></div>`}
+function table(cols,rows,fmt){if(!rows||!rows.length)return `<div class="dim">none</div>`;return `<table><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join("")}</tr>${rows.map(r=>`<tr>${fmt(r).map(x=>`<td>${x}</td>`).join("")}</tr>`).join("")}</table>`}
+const stTag=s=>({SUCCEEDED:"t-ok",DEAD:"t-bad",RETRY:"t-stale",LEASE_EXPIRED:"t-stale",active:"t-ok"}[s]||"t-no");
+function tasksCards(c,l){const g=(o,k)=>(o||{})[k]||0;return card("Tasks succeeded · 24h",N(g(l,"SUCCEEDED")),"fleet.db fleet_tasks",NOW,60)+card("Failed / dead-letter",N(g(c,"DEAD")+g(c,"FAILED")),"all time · bounded retries then DEAD",NOW,60,g(c,"DEAD")?"bad":"")+card("Queued · leased",N(g(c,"QUEUED"))+" · "+N(g(c,"LEASED")),"fleet.db",NOW,60)}
+const R={
+overview(d){const w=d.workers||[],ls=d.live_sales||{},fu=(d.funnel.data||{}),ds=fu.disco||{},sd=(d.sender.data||{}),q=(sd.quota||{}),sc=(d.scout.data||{});
+const alive=w.filter(x=>x.alive).length,ops=d.operational.length;
+return `<h2>Fleet health</h2><div class="grid">
+${card("Workers alive",alive+" / "+ops,"heartbeat < 30 s · operational dots",NOW,60,alive===ops&&ops?"ok":"bad")}
+${card("Dots registered",(d.operational.length+d.not_operational.length),d.operational.length+" operational · "+d.not_operational.length+" NOT_OPERATIONAL",NOW,60)}
+${tasksCards(d.core.counts,d.core.last24h)}</div>
+<h2>Current worker activity</h2><div class="card">${table(["worker","state","task","heartbeat"],w,x=>[esc(x.dot),`<span class="tag ${x.alive?"t-ok":"t-bad"}">${x.alive?(x.current_kind?"BUSY":"IDLE"):"DOWN"}</span>`,esc(x.current_kind||"—"),age(x.hb_age_s)])}</div>
+<h2>Leads &amp; outreach</h2><div class="grid">
+${card("Raw records discovered",N(ds.raw),"disco_raw · analyst snapshot",d.funnel.as_of,900)}
+${card("Unique companies",N(ds.candidates),"disco_candidates",d.funnel.as_of,900)}
+${card("Qualified (staged+promoted)",N(ds.qualified_total),"gates: role addr · same domain · MX · evidence",d.funnel.as_of,900)}
+${card("Emails sent · total",N(ls.sent_total),"sales_send_intents SENT (live read)",ls.as_of,120)}
+${card("Sent · last 24 h",N(ls.sent_24h)+" / "+N(q.sales_budget_if_idle),"Sales Dot allocation (2000 cap − 200 reserve)",ls.as_of,120)}
+${card("Replies received",N(ls.replies),"sales_inbound REPLY matched to an outreach prospect (live)",ls.as_of,120,ls.replies?"ok":"")}
+${card("Hard/soft bounces",N(ls.bounces),"sales_inbound BOUNCE*",ls.as_of,120)}</div>
+<h2>Outcomes &amp; cost</h2><div class="grid">
+${unk("Verified sales",d.unknown.verified_sales)}${unk("Revenue",d.unknown.revenue_usd)}${unk("Meetings",d.unknown.meetings)}${unk("Conversions",d.unknown.conversions)}
+${card("Fleet model spend",d.cost.fleet_model_usd==null?null:"$"+d.cost.fleet_model_usd.toFixed(4),(d.cost.calls??"?")+" model calls by fleet dots (adapters are deterministic)",NOW,3600)}
+${unk("Luna / Codex subscription",d.unknown.luna_subscription_cost)}</div>
+<h2>Recent attempts</h2><div class="card">${table(["when","dot","kind","outcome","detail"],d.recent,x=>[age(NOW-x.at)+" ago",esc(x.dot),esc(x.kind),`<span class="tag ${stTag(x.outcome)}">${esc(x.outcome)}</span>`,esc((x.detail||"").slice(0,110))])}</div>`},
+dots(d){return `<h2>Dots</h2><div class="grid w2">${d.dots.map(x=>{const w=x.worker;return `<div class="card"><div class="k">${esc(x.role)} · ${esc(x.name)}</div>
+<div class="v sm">${x.operational?`<span class="tag t-ok">OPERATIONAL</span>`:`<span class="tag t-no">NOT_OPERATIONAL</span>`}${w?` <span class="tag ${w.alive?"t-ok":"t-bad"}">${w.alive?(w.current_kind?"BUSY":"IDLE"):"DOWN"}</span> <span class="dim">hb ${age(w.hb_age_s)}</span>`:""}</div>
+<p>${esc(x.mission)}</p>${x.not_operational_reason?`<p class="bad">BLOCKER: ${esc(x.not_operational_reason)}</p>`:""}
+<div class="k">Permissions</div><div>allow: ${x.capabilities.allow.map(esc).join(", ")||"—"}<br><span class="dim">deny: ${x.capabilities.deny.map(esc).join(", ")}</span></div>
+<div class="k" style="margin-top:6px">Budget</div><div class="dim">${esc(JSON.stringify(x.budget))}</div>
+<div class="k" style="margin-top:6px">Tasks</div><div>${Object.entries(x.task_counts).map(([k,v])=>`${esc(k)} ${v}`).join(" · ")||"none"} · receipts ${x.receipts.n} (blocked ${x.receipts.blocked||0})</div>
+${x.last_error?`<div class="bad src">last error: ${esc(x.last_error.slice(0,160))}</div>`:""}
+<div class="k" style="margin-top:6px">Activity / receipts</div>${table(["when","kind","outcome","receipt"],x.history,h=>[age(NOW-h.at),esc(h.kind),`<span class="tag ${stTag(h.outcome)}">${esc(h.outcome)}</span>`,esc(h.receipt_id||"—")])}</div>`}).join("")}</div>`},
+sales(d){const ls=d.live_sales||{},fu=d.funnel.data||{},ds=fu.disco||{},sl=fu.sales||{},sd=d.sender.data||{},q=sd.quota||{},el=fu.eligible_queue||{},dl=d.deliverability.data||{},dg=fu.send_diag||{};
+const st=ds.stages||{};const max=Math.max(1,ds.raw||0);
+const stage=(n,v)=>`<tr><td>${esc(n)}</td><td>${N(v)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.min(100,100*(v||0)/max)}%"></i></div></td></tr>`;
+return `<h2>Discovery funnel</h2><div class="grid w2"><div class="card"><table>${stage("raw records",ds.raw)}${stage("unique companies",ds.candidates)}${stage("qualified (staged)",st.QUALIFIED)}${stage("promoted → drafted",st.PROMOTED)}${stage("send-eligible drafts",el.eligible)}${stage("sent",sl.sent_by_this_dot)}${stage("replied",sl.replies_received)}</table><div class="src">disco_* tables · analyst snapshot ${fresh(d.funnel.as_of,900)}</div></div>
+<div class="card"><div class="k">Top rejection reasons</div>${table(["reason","n"],Object.entries(ds.rejections||{}).slice(0,10),r=>[esc(r[0]),N(r[1])])}<div class="src">${fresh(d.funnel.as_of,900)}</div></div></div>
+<h2>Outbound volume &amp; quota</h2><div class="grid">
+${card("Sent last 24 h",N(ls.sent_24h),"live CRM read",ls.as_of,120)}${card("Sales allocation",N(q.sales_budget_if_idle),"cap "+N(q.effective_cap_24h)+" − reserve "+N(q.reserve)+" kept",d.sender.as_of,300)}
+${card("Account sends 24h (Gmail count, cached)",q.account_sends_24h_cached?N(q.account_sends_24h_cached.n):null,"counted by sender while in-window; null = not measured outside window",d.sender.as_of,300)}
+${card("Send window",sd.in_window?"OPEN":"CLOSED",sd.window||"",d.sender.as_of,300,sd.in_window?"ok":"")}
+${card("Sender heartbeat",sd.heartbeat_age_s==null?null:age(sd.heartbeat_age_s),"drex-sales-dot (single authoritative sender)",d.sender.as_of,300,sd.heartbeat_age_s<180?"ok":"bad")}
+${card("Emergency stop / pause",sd.emergency_stop||sd.stop_file||sd.paused_until?"ACTIVE":"none",sd.pause_reason||"",d.sender.as_of,300)}</div>
+<h2>Replies · meetings · conversions</h2><div class="grid">${card("Replies to outreach",N(ls.replies),"REPLY matched to a prospect",ls.as_of,120)}${card("Unmatched inbox mail",N(ls.inbound_unmatched),"sync counted as REPLY but linked to no prospect — unreconciled",ls.as_of,120,ls.inbound_unmatched?"sig":"")}${card("Bounces",N(ls.bounces),"sales_inbound BOUNCE*",ls.as_of,120)}${card("Opt-outs",N(ls.opt_outs),"sales_inbound OPT_OUT",ls.as_of,120)}${unk("Meetings","no calendar/booking source wired")}${unk("Conversions","no payment/CRM-won source wired")}</div>
+<h2>CRM &amp; draft queue</h2><div class="grid">${card("Prospects in CRM",N(ls.prospects),"prospects",ls.as_of,120)}${card("Drafted, waiting",N(ls.drafted_queue),"status MESSAGE_DRAFTED",ls.as_of,120)}${card("Send-eligible now",N(el.eligible),"sender's own candidate_problems()",d.funnel.as_of,900)}
+<div class="card"><div class="k">Why drafts are blocked</div>${table(["reason","n"],Object.entries(el.blocked_reasons||{}),r=>[esc(r[0]),N(r[1])])}</div></div>
+<h2>Deliverability (DNS)</h2><div class="grid w2"><div class="card">${[["SPF",dl.spf],["DMARC",dl.dmarc],["DKIM",dl.dkim]].map(([n,x])=>x?`<div>${n} <span class="tag ${x.status==="PASS"?"t-ok":"t-bad"}">${esc(x.status)}</span> <span class="dim">${esc(x.record||(x.selectors_found?Object.keys(x.selectors_found).join(","):""))}</span></div>`:"").join("")||'<span class="dim">UNKNOWN</span>'}<div class="src">${esc(dl.note||"")} ${fresh(d.deliverability.as_of,28800)}</div></div>
+<div class="card"><div class="k">Send diagnostics (60 sends / 0 replies)</div><div>to blocklisted domains: ${N(dg.to_blocklisted_domains)} · unmatched inbound: ${N(dg.unmatched_inbound)}<br>historic sends: ${N(sl.sent_historic)} · by this dot: ${N(sl.sent_by_this_dot)} · failed intents: ${N(sl.failed_intents)}</div></div></div>
+<h2>Prospect evidence (staged, verbatim from company page)</h2><div class="card">${table(["company","cat","rank","address","quote"],ds.top_staged,x=>[esc(x.company_name||x.domain),esc(x.business_category),N(x.rank),esc(x.contact_email),`<span class="q">“${esc((x.signal_quote||"").slice(0,140))}”</span><br><a class="dim" href="${esc(x.signal_url)}" rel="noreferrer noopener" target="_blank">${esc(x.signal_url)}</a>`])}</div>
+<h2>Last promotion run</h2><div class="card">${d.promotion.data?`<div>${d.promotion.data.dry_run?"DRY RUN":"EXECUTED"} · passed ${(d.promotion.data.passed||[]).length} · rejected ${(d.promotion.data.rejected||[]).length} · promoted ${(d.promotion.data.promoted||[]).length} ${fresh(d.promotion.as_of,86400*30)}</div>${table(["domain","reasons"],d.promotion.data.rejected||[],r=>[esc(r.domain),esc((r.reasons||[]).join(", "))])}`:'<span class="dim">no promotion run recorded</span>'}</div>`},
+system(d){const h=d.host.data||{},cl=d.cluster.data||{},mem=h.mem||{};const used=mem.MemTotal?(100*(1-mem.MemAvailable/mem.MemTotal)).toFixed(0)+"%":null;
+return `<h2>Resources</h2><div class="grid">${card("Load (1/5/15)",(h.load||[]).map(x=>x.toFixed(1)).join(" / ")||null,(h.cpus||"?")+" CPUs",d.host.as_of,180)}${card("Memory used",used,mem.MemTotal?(mem.MemTotal/2**30).toFixed(0)+" GiB total":"",d.host.as_of,180)}
+${Object.entries(h.disks||{}).map(([k,v])=>card("Disk "+k,v.pct+"%",(v.total/2**30).toFixed(0)+" GiB",d.host.as_of,180,v.pct>90?"bad":"")).join("")}</div>
+<h2>Service health</h2><div class="card">${table(["unit","scope","state","restarts","since"],h.units,u=>[esc(u.unit),esc(u.scope||"—"),`<span class="tag ${u.active==="active"?"t-ok":u.scope?"t-bad":"t-no"}">${esc(u.active)}</span>`,N(u.restarts),esc(u.since||"")])}<div class="src">systemctl · sentinel ${fresh(d.host.as_of,180)}</div></div>
+<h2>N1 / N2 / N3 / N4 handoff</h2><div class="grid w2">${["n1","n2","n3","n4"].map(n=>{const x=(cl.nodes||{})[n];return `<div class="card"><div class="k">${n.toUpperCase()}</div>${x?`<div class="dim">${esc(x.host||x.header)}</div>${Object.entries(x.services).map(([s,v])=>`<div>${esc(s)} <span class="tag ${v==="active"?"t-ok":"t-bad"}">${esc(v)}</span></div>`).join("")}`:`<span class="dim">UNKNOWN</span>`}<div class="src">${fresh(d.cluster.as_of,1500)}</div></div>`}).join("")}
+<div class="card"><div class="k">N1 money gate (read-only)</div><pre>${esc((cl.n1_gate||{}).text||"UNKNOWN")}</pre></div><div class="card"><div class="k">N4 forward lab (read-only)</div><pre>${esc((cl.n4_lab||{}).text||"UNKNOWN")}</pre></div></div>
+<h2>Failed jobs / dead letters</h2><div class="card">${table(["when","dot","kind","tries","error"],d.dead,x=>[age(NOW-x.updated_at)+" ago",esc(x.dot),esc(x.kind),x.attempts,esc((x.last_error||"").slice(0,140))])}</div>
+<h2>Logs · alerts</h2><div class="grid w2"><div class="card"><div class="k">Sender alerts.jsonl (last 15)</div>${table(["when","kind","detail"],(h.alerts||[]).slice().reverse(),a=>[age(NOW-a.ts)+" ago",esc(a.kind),esc(JSON.stringify(Object.fromEntries(Object.entries(a).filter(([k])=>!["ts","kind"].includes(k)))).slice(0,120))])}</div>
+<div class="card"><div class="k">Non-success attempts</div>${table(["when","dot","outcome","detail"],d.recent,x=>[age(NOW-x.at)+" ago",esc(x.dot),`<span class="tag ${stTag(x.outcome)}">${esc(x.outcome)}</span>`,esc((x.detail||"").slice(0,100))])}</div></div>
+${(h.findings||[]).length?`<h2>Findings</h2><div class="card bad">${h.findings.map(esc).join("<br>")}</div>`:""}`}};
+function nav(){document.getElementById("nav").innerHTML=VIEWS.map(v=>`<a href="#${v}" class="${v===view?"on":""}">${v}</a>`).join("")}
+async function tick(){try{const r=await fetch("/api/"+view,{cache:"no-store"});const d=await r.json();NOW=d.now||Date.now()/1000;
+document.getElementById("stat").innerHTML=d.error?`<span class="bad">${esc(d.error)}</span>`:`<b>LIVE</b> ${new Date(NOW*1000).toLocaleTimeString()}`;
+if(!d.error)document.getElementById("main").innerHTML=R[view](d)}catch(e){document.getElementById("stat").innerHTML=`<span class="bad">DASHBOARD BACKEND UNREACHABLE</span>`}}
+addEventListener("hashchange",()=>{view=(location.hash||"#overview").slice(1);if(!VIEWS.includes(view))view="overview";nav();tick()});nav();tick();setInterval(tick,10000);
+</script></body></html>

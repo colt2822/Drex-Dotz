@@ -155,3 +155,19 @@ def test_stop_dot(tmp_path: Path):
 
     dot.transition_to(DotState.STOPPED, reason="Manual shutdown")
     assert dot.state == DotState.STOPPED
+
+
+def test_model_text_alone_is_not_completion(tmp_path: Path):
+    from dotz.models_router import CompletionResult, ModelUsage
+    rt = Runtime(root_dir=tmp_path / "rt_verify")
+    rt.create_dot(DotConfig(name="v_dot", mission="Verify"))
+    class Fake:
+        def complete(self, **kw):
+            return CompletionResult(text="all done!", model="m", provider="p", usage=ModelUsage(input_tokens=1, output_tokens=1))
+    rt.models = Fake()
+    t1 = rt.assign_task("v_dot", "claim success")
+    assert rt.execute_task(t1)["status"] == "UNVERIFIED"
+    t2 = rt.assign_task("v_dot", "claim success verified")
+    assert rt.execute_task(t2, verifier=lambda text: False)["status"] == "UNVERIFIED"
+    t3 = rt.assign_task("v_dot", "verified for real")
+    assert rt.execute_task(t3, verifier=lambda text: "done" in text)["status"] == "COMPLETED"

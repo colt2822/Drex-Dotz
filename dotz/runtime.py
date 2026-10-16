@@ -5,7 +5,7 @@ import json
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from dotz.dot import Dot
 from dotz.events import EventDispatcher, EventEnvelope
@@ -130,8 +130,12 @@ class Runtime:
         )
         return task_id
 
-    def execute_task(self, task_id: str) -> dict:
-        """Run a task to completion within bounded Drex capabilities."""
+    def execute_task(self, task_id: str, verifier: Optional[Callable[[str], bool]] = None) -> dict:
+        """Run a task within bounded Drex capabilities.
+
+        Model text alone is never completion: COMPLETED requires `verifier(text)` to pass against real state.
+        Without a verifier a successful model reply is recorded as UNVERIFIED.
+        """
         row = self.store.one("SELECT * FROM tasks WHERE task_id = ?", (task_id,))
         if not row:
             raise ValueError(f"Task {task_id} not found")
@@ -153,7 +157,12 @@ class Runtime:
 
         res_text = comp.text if comp.ok else f"Failed: {comp.error}"
         now = time.time()
-        status = "COMPLETED" if comp.ok else "FAILED"
+        if not comp.ok:
+            status = "FAILED"
+        elif verifier is not None and verifier(comp.text):
+            status = "COMPLETED"
+        else:
+            status = "UNVERIFIED"
 
         self.store.x(
             "UPDATE tasks SET status = ?, result = ?, updated_at = ? WHERE task_id = ?",
@@ -415,6 +424,14 @@ class Runtime:
             },
         )
         return child_task_id
+
+    def run_due(self, verifiers: Optional[Dict[str, Callable[[str], bool]]] = None) -> List[dict]:
+        """tick() then actually execute the tasks it created (scheduler -> worker execution)."""
+        results = []
+        for task_id in self.tick():
+            row = self.store.one("SELECT dot FROM tasks WHERE task_id = ?", (task_id,))
+            results.append(self.execute_task(task_id, (verifiers or {}).get(row["dot"])))
+        return results
 
     # Periodic Scheduler Tick
     def tick(self) -> List[str]:

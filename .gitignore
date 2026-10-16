@@ -11,3 +11,12 @@ dotz_runtime/
 /tmp/dotz_demo/
 build/
 dist/
+
+# fleet/sales runtime state (never commit)
+.local/
+*.lock
+alerts.jsonl
+STOP
+fleet.db*
+token*.json
+*client*secret*.json

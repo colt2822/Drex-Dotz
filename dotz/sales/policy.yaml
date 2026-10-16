@@ -1,0 +1,68 @@
+# ELYRAON standing campaign policy. Editing this file changes its hash and voids any prior owner approval.
+# Sending requires owner approval of this exact file hash:  python -m dotz.sales approve-policy --categories <list>
+id: elyraon.sales.v3
+sender_account: colt@elyraon.com.co
+jurisdiction: US
+recipient_categories:
+  inbound_or_invited:
+    description: Prospect invited vendor/partner contact or wrote to ELYRAON first.
+  public_business_role_address:
+    description: >
+      Role/business address published on the company's own official contact page, a US business,
+      individually relevant to a service ELYRAON offers. B2B commercial email under CAN-SPAM
+      (accurate sender, postal address, working opt-out). OWNER MUST CHOOSE whether to enable this
+      category; it is the legal/provider-terms call for cold B2B email.
+always_excluded:
+  - free_mail_domains            # gmail/yahoo/outlook/etc: personal or unverifiable
+  - job_or_staffing_posts
+  - purchased_or_scraped_lists
+  - marketplace_platform_contacts  # Upwork etc: platform rules forbid off-platform contact
+  - non_us_recipients
+  - any_suppressed_address_or_domain
+  - any_prior_contact_same_address_or_domain_within_90_days
+channels:
+  email: gmail_api_business_account_only
+content_rules:
+  max_words: 130
+  require: [sender_identity, postal_footer, advertisement_disclosure, reply_opt_out, grounded_signal_quote]
+  forbid: [price, guarantee, savings_or_result_claims, urgency, fake_reply_or_forward_prefix, attachments, tracking_pixels]
+  followups: 0            # one message per recipient; no automated follow-ups
+  auto_replies: false     # inbound replies are classified and drafted for the owner, never auto-sent
+schedule:
+  timezone: America/Chicago
+  weekdays: [0, 1, 2, 3, 4]
+  start_hour: 9
+  end_hour: 16
+volume:
+  # No daily ramp-up. Sending is sustained and paced across the remaining window.
+  account_rolling_24h_cap: 2000          # owner-configured maximum of ALL account messages per rolling 24h
+  google_account_limit: 2000             # Google's per-user limit for a paid Workspace account (owner confirmed paid business account)
+  reserve_for_transactional_and_manual: 200   # never consumed by Sales Dot (Stripe fulfillment emails, owner mail, replies)
+  pacing: {min_spacing_seconds: 8, max_spacing_seconds: 300, jitter: 0.2, tick_budget_seconds: 50}
+pause_conditions:                        # automatic, time-boxed; Google enforcement is never bypassed
+  provider_throttle_backoff_seconds: [900, 1800, 3600, 7200, 21600, 86400]
+  reputation_dsn_pause_seconds: 21600    # 5.7.x / blocked / sending-limit DSN
+  reputation_dsn_stop_count_24h: 3
+stop_conditions:
+  hard_bounce_rate_at_or_above: 0.02
+  bounce_window_sends: 100
+  any_complaint: true
+  gmail_auth_or_identity_failure: true
+  reply_sync_stale_seconds: 7200
+  unresolved_send_intent_older_than_seconds: 900
+discovery:
+  min_seconds_between_runs: 300    # bounds Luna (subscription) usage
+  max_new_prospects_per_day: 600
+  per_tick_pages: 10
+  min_fit_score: 60
+  verticals:
+    - roofing contractors
+    - commercial cleaning companies
+    - plumbing contractors
+    - auto body shops
+    - landscaping companies
+    - HVAC companies
+  offer_url: https://elyraon.com.co/services/
+verification:
+  require_mx: true                       # recipient domain must have MX/A records before any send
+  mx_cache_seconds: 604800

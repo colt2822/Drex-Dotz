@@ -1,0 +1,15 @@
+[Unit]
+Description=Drex Fleet Command dashboard (read-only, 127.0.0.1:8795)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/drex-dotz
+ExecStart=%h/drex-dotz/.venv/bin/python -m dotz.fleet dashboard --port 8795
+Restart=always
+RestartSec=10
+Nice=10
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=default.target
