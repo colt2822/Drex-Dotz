@@ -98,6 +98,7 @@ def build(view: str) -> dict:
     try:
         core = fleet_core(f, now)
         funnel, sender, scout = snap(f, "funnel"), snap(f, "sender"), snap(f, "scout")
+        linkedin = snap(f, "linkedin")
         out = {"now": now, "view": view, "core": {k: core[k] for k in ("counts", "last24h")}}
         if view == "overview":
             ls = live_sales(now)
@@ -106,7 +107,9 @@ def build(view: str) -> dict:
             out |= {"workers": core["workers"], "live_sales": ls, "funnel": funnel, "scout": scout, "sender": sender,
                     "cost": model_cost(), "operational": [d["name"] for d in core["dots"] if d["operational"]],
                     "not_operational": [d["name"] for d in core["dots"] if not d["operational"]],
-                    "unknown": {"verified_sales": "no source wired (no storefront/Stripe feed ingested)", "revenue_usd": "no source wired",
+                    "linkedin": linkedin, "revenue": snap(f, "revenue"), "research": snap(f, "research"), "growth": snap(f, "growth"),
+                    "director": snap(f, "director"), "support": snap(f, "triage"),
+                    "unknown": {"verified_sales": "no source wired", "revenue_usd": "no source wired",
                                 "meetings": "no source wired", "conversions": "no source wired", "luna_subscription_cost": "usage not metered"},
                     "recent": rows(f, "SELECT task_id,dot,kind,outcome,detail,at FROM fleet_attempts ORDER BY seq DESC LIMIT 14"),
                     "disco_qualified": ds.get("qualified_total")}
@@ -130,11 +133,39 @@ def build(view: str) -> dict:
         elif view == "sales":
             out |= {"live_sales": live_sales(now), "funnel": funnel, "sender": sender, "scout": scout, "deliverability": snap(f, "deliverability"),
                     "promotion": snap(f, "promotion"), "dry_promotion": None}
+        elif view == "linkedin":
+            schedule_path = Path(__file__).with_name("linkedin_manual_schedule.json")
+            try:
+                plan = json.loads(schedule_path.read_text(encoding="utf-8"))
+                out["linkedin_schedule"] = {"status": "READY", "source": "local_manual_schedule_file",
+                                             "reporting_mode": "MANUAL_REPORTS_ONLY", "plan": plan}
+            except (OSError, json.JSONDecodeError) as e:
+                out["linkedin_schedule"] = {"status": "UNKNOWN", "reason": type(e).__name__,
+                                             "source": str(schedule_path), "reporting_mode": "MANUAL_REPORTS_ONLY"}
+            out["linkedin"] = snap(f, "linkedin")
+        elif view == "revenue":
+            rv = snap(f, "revenue")
+            last = f.execute("SELECT outcome,detail,at FROM fleet_attempts WHERE kind='commerce.revenue_observe' ORDER BY seq DESC LIMIT 1").fetchone()
+            ok_at = rv["as_of"]
+            out |= {"revenue": {"as_of": ok_at, "feed": (rv["data"] or {}).get("feed"),
+                                "last_attempt": dict(last) if last else None,
+                                "unreachable": bool(last and last["outcome"] != "SUCCEEDED" and (ok_at is None or last["at"] > ok_at))}}
+        elif view == "research":
+            out |= {"research": snap(f, "research"), "canonical_file": "/home/colton-mcclain/elyraon.com.co/docs/x-research/canonical-fleet-research.json"}
+        elif view == "growth":
+            out |= {"growth": snap(f, "growth")}
+        elif view == "director":
+            out |= {"director": snap(f, "director")}
         elif view == "system":
             out |= {"host": snap(f, "host"), "cluster": snap(f, "cluster"), "workers": core["workers"],
                     "dead": rows(f, "SELECT task_id,dot,kind,attempts,last_error,updated_at FROM fleet_tasks WHERE status IN ('DEAD','FAILED') ORDER BY updated_at DESC LIMIT 25"),
                     "retrying": rows(f, "SELECT task_id,dot,kind,attempts,last_error,run_after FROM fleet_tasks WHERE status='QUEUED' AND attempts>0 ORDER BY updated_at DESC LIMIT 10"),
                     "recent": rows(f, "SELECT task_id,dot,kind,outcome,detail,at FROM fleet_attempts WHERE outcome!='SUCCEEDED' ORDER BY seq DESC LIMIT 20")}
+        elif view in ("model_usage", "models"):
+            from dotz.fleet.model_usage import get_model_usage_snapshot
+            mu = get_model_usage_snapshot(now=now)
+            out |= mu
+            out["model_usage"] = mu
         else:
             return {"error": "unknown view"}
         return out
@@ -164,7 +195,9 @@ class H(BaseHTTPRequestHandler):
             return self._send(403, b'{"error":"host not allowed"}')
         path = self.path.split("?")[0]
         if path in ("/", "/index.html"):
-            return self._send(200, PAGE.encode(), "text/html")
+            html_path = Path(__file__).with_name("dashboard.html")
+            page_content = html_path.read_text(encoding="utf-8") if html_path.exists() else PAGE
+            return self._send(200, page_content.encode("utf-8"), "text/html")
         if path == "/healthz":
             return self._send(200, b'{"ok":true}')
         if path.startswith("/api/"):

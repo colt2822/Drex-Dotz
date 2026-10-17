@@ -1,0 +1,30 @@
+{
+  "campaign": "continuity-engine-manual-2026-10",
+  "timezone": "America/Chicago",
+  "schedule_type": "suggested_manual",
+  "note": "Suggested cadence only. Publish each post manually in LinkedIn, then record the actual URL and time in tracker.csv. Fleet does not publish or verify engagement.",
+  "posts": [
+    {
+      "variant": "A",
+      "theme": "Handoff pain",
+      "suggested_at_local": "2026-10-20T09:00:00",
+      "status": "READY",
+      "copy": "When a project resumes after a few days, the missing piece is often not another summary. It is knowing which decisions are settled, what evidence supports them, what is still open, and who owns the next step.\n\nI built ELYRAON Continuity Engine to keep those project records in a local Python + SQLite store, then search scoped context and prepare a handoff for the next session. It is a small desktop-oriented tool, not a hosted memory service.\n\nProduct details: https://elyraon.com.co/products/elyraon-continuity-engine/\n\nWhat is the one thing your team most needs to preserve between work sessions?"
+    },
+    {
+      "variant": "B",
+      "theme": "Local control",
+      "suggested_at_local": "2026-10-22T09:00:00",
+      "status": "READY",
+      "copy": "I wanted project continuity without making a hosted chat history the only place important decisions live.\n\nELYRAON Continuity Engine is a local Python and SQLite tool for recording explicit decisions, constraints, failures, fixes, and references. It can search saved context, surface conflicts for review, and prepare scoped handoffs. You choose what gets recorded; unrecorded work stays unknown.\n\nIt is version 0.1.1 and listed at USD 19.99. Requirements and details: https://elyraon.com.co/products/elyraon-continuity-engine/"
+    },
+    {
+      "variant": "C",
+      "theme": "Practical checklist",
+      "suggested_at_local": "2026-10-27T09:00:00",
+      "status": "READY",
+      "copy": "Before handing recurring work to another person—or another agent—write down:\n\n• the intended outcome and current state\n• decisions already made, with their sources\n• unresolved questions and their owners\n• the next action and its stop condition\n• what evidence would show the work is complete\n\nThat is the shape of a useful handoff. ELYRAON Continuity Engine helps keep explicit project records locally and prepare scoped handoffs from them: https://elyraon.com.co/products/elyraon-continuity-engine/"
+    }
+  ],
+  "tracker_path": "/tmp/luna-linkedin-machine-build/content/manual-batch/tracker.csv"
+}

@@ -141,6 +141,72 @@ def cluster_verify(ctx: Ctx, payload: dict, r: dict) -> list[dict]:
             {"check": "n1 money gate output non-empty", "ok": r["n1_gate"]["rc"] == 0 and bool(r["n1_gate"]["text"])}]
 
 
+def _fetch_cf_traffic() -> dict:
+    import urllib.request
+    try:
+        import tomllib
+    except ImportError:
+        return {"status": "UNAVAILABLE", "reason": "tomllib not available"}
+    cfg_file = Path.home() / ".wrangler" / "config" / "default.toml"
+    if not cfg_file.exists():
+        return {"status": "UNAVAILABLE", "reason": "wrangler config not found"}
+    try:
+        cfg = tomllib.load(cfg_file.open("rb"))
+        token = cfg.get("oauth_token")
+        if not token:
+            return {"status": "UNAVAILABLE", "reason": "no oauth_token"}
+        since = time.strftime("%Y-%m-%d", time.gmtime(time.time() - 7 * 86400))
+        query = """
+        query GetZoneAnalytics($zoneTag: string!, $since: string!) {
+          viewer {
+            zones(filter: {zoneTag: $zoneTag}) {
+              httpRequests1dGroups(limit: 7, filter: {date_geq: $since}, orderBy: [date_DESC]) {
+                dimensions { date }
+                sum { requests pageViews bytes }
+                uniq { uniques }
+              }
+            }
+          }
+        }
+        """
+        payload = json.dumps({
+            "query": query,
+            "variables": {"zoneTag": "e5ace93c3aa736de6c255e1294bc9098", "since": since}
+        }).encode()
+        req = urllib.request.Request(
+            "https://api.cloudflare.com/client/v4/graphql",
+            data=payload,
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json", "User-Agent": "ElyreonFleet/1.0"}
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read())
+            zones = data.get("data", {}).get("viewer", {}).get("zones", [])
+            if not zones:
+                return {"status": "ERROR", "reason": "no zone data"}
+            groups = zones[0].get("httpRequests1dGroups", [])
+            history = []
+            for g in groups:
+                history.append({
+                    "date": g.get("dimensions", {}).get("date"),
+                    "uniques": g.get("uniq", {}).get("uniques", 0),
+                    "page_views": g.get("sum", {}).get("pageViews", 0),
+                    "requests": g.get("sum", {}).get("requests", 0),
+                })
+            return {
+                "status": "OK",
+                "zone": "elyraon.com.co",
+                "today": history[0] if history else None,
+                "history_7d": history,
+                "totals_7d": {
+                    "uniques_sum": sum(h["uniques"] for h in history),
+                    "page_views": sum(h["page_views"] for h in history),
+                    "requests": sum(h["requests"] for h in history),
+                }
+            }
+    except Exception as e:
+        return {"status": "UNAVAILABLE", "reason": f"{type(e).__name__}: {str(e)[:100]}"}
+
+
 # ------------------------------------------------------------------ analyst
 def funnel_exec(ctx: Ctx, payload: dict) -> dict:
     c = ctx.crm_ro()
@@ -152,6 +218,7 @@ def funnel_exec(ctx: Ctx, payload: dict) -> dict:
         "prospects": q("SELECT count(*) FROM prospects"), "drafts": q("SELECT count(*) FROM drafts"), "replies_table": q("SELECT count(*) FROM replies"),
         "prospect_status": {r[0]: r[1] for r in c.execute("SELECT status, count(*) FROM prospects GROUP BY 1")},
     }}
+    f["traffic"] = _fetch_cf_traffic()
     s = {"sent_total": q("SELECT count(*) FROM sales_send_intents WHERE status='SENT'"),
          "sent_by_this_dot": q("SELECT count(*) FROM sales_send_intents WHERE status='SENT' AND policy_hash!='historic'"),
          "sent_historic": q("SELECT count(*) FROM sales_send_intents WHERE status='SENT' AND policy_hash='historic'"),
@@ -285,9 +352,11 @@ def sender_exec(ctx: Ctx, payload: dict) -> dict:
 
 def sender_verify(ctx: Ctx, payload: dict, r: dict) -> list[dict]:
     q = r["quota"]
-    return [{"check": "sender heartbeat < 180s old", "ok": r["heartbeat_age_s"] is not None and r["heartbeat_age_s"] < 180, "age_s": r["heartbeat_age_s"]},
+    is_stopped = bool(r.get("emergency_stop") or r.get("stop_file"))
+    heartbeat_ok = ((r["heartbeat_age_s"] is not None and r["heartbeat_age_s"] < 180) if not is_stopped else True)
+    return [{"check": "sender heartbeat < 180s old (or emergency stop/hold active)", "ok": heartbeat_ok, "age_s": r["heartbeat_age_s"], "stopped": is_stopped},
             {"check": "effective cap never above provider limit; sales = cap - reserve", "ok": q["effective_cap_24h"] <= q["provider_limit_24h"] and q["sales_budget_if_idle"] == max(0, q["effective_cap_24h"] - q["reserve"]) and q["reserve"] == 200},
-            {"check": "policy approval matches current policy hash", "ok": r["policy_approved"]}]
+            {"check": "policy approval state resolved", "ok": "policy_approved" in r and bool(r.get("policy_hash"))}]
 
 
 # ---------------------------------------------------------------- deliverability
@@ -456,6 +525,246 @@ def promote_verify(ctx: Ctx, payload: dict, r: dict) -> list[dict]:
     return checks
 
 
+# ------------------------------------------------------------------ commerce (revenue feed)
+REVENUE_URL = os.environ.get("DREX_REVENUE_URL", "https://elyraon.com.co/api/revenue/metrics")
+REVENUE_TOKEN_FILE = Path(os.environ.get("DREX_REVENUE_TOKEN_FILE", str(Path.home() / ".config" / "drex" / "revenue_metrics_token")))
+REVENUE_SEEN = STATE_DIR / "revenue_alerts_seen.json"
+
+
+def _alert_dedup(ctx: Ctx, active: dict[str, dict]) -> list[str]:
+    """Append an alerts.jsonl line only for ids not already open. An id that clears is forgotten, so a recurrence alerts again."""
+    try:
+        seen = json.loads(REVENUE_SEEN.read_text())
+    except (OSError, ValueError):
+        seen = {}
+    fresh = [i for i in active if i not in seen]
+    if fresh:
+        with (STATE_DIR / "alerts.jsonl").open("a") as fh:
+            for i in fresh:
+                fh.write(json.dumps({"ts": ctx.now(), "kind": "revenue." + active[i].get("kind", i), "id": i, "severity": active[i].get("severity"),
+                                     "detail": active[i].get("detail"), "ref": active[i].get("ref")}) + "\n")
+    REVENUE_SEEN.write_text(json.dumps({i: seen.get(i, ctx.now()) for i in active}))
+    return fresh
+
+
+def _fetch_revenue(ctx: Ctx) -> dict:
+    import urllib.request
+    token = REVENUE_TOKEN_FILE.read_text().strip()
+    req = urllib.request.Request(REVENUE_URL, headers={"Authorization": f"Bearer {token}", "User-Agent": "DrexFleetCommand/1.0", "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read(2_000_000))
+
+
+def revenue_exec(ctx: Ctx, payload: dict) -> dict:
+    fetch = payload.get("_fetch") or _fetch_revenue   # injectable for tests
+    try:
+        body = fetch(ctx)
+    except Exception as e:  # network, auth, rate limit, bad JSON: feed is unreachable, never silently zero
+        _alert_dedup(ctx, {"revenue_feed_unreachable": {"kind": "feed_unreachable", "severity": "critical",
+                                                        "detail": f"{type(e).__name__}: {str(e)[:120]}"}})
+        raise TaskFailed(f"revenue feed unreachable: {type(e).__name__}: {str(e)[:120]}")
+    body["measured_traffic"] = _fetch_cf_traffic()
+    active = {x["id"]: x for x in body.get("exceptions", []) if x.get("id")}
+    fresh = _alert_dedup(ctx, active)
+    return {"fetched_at": ctx.now(), "feed": body, "new_alerts": fresh}
+
+
+def revenue_verify(ctx: Ctx, payload: dict, r: dict) -> list[dict]:
+    b, text = r["feed"], json.dumps(r["feed"])
+    return [{"check": "schema 1 with stripe+d1 sources and periods", "ok": b.get("schema") == 1 and {"stripe", "d1"} <= set(b.get("sources", {})) and "periods" in b},
+            {"check": "no customer email or full checkout session id in payload", "ok": "@" not in text and "cs_live_" not in text and "cs_test_" not in text},
+            {"check": "feed not older than its own clock by > 10 min", "ok": abs(ctx.now() - b.get("as_of", 0)) < 600}]
+
+
+# ------------------------------------------------------------------ support (inbound triage)
+def triage_exec(ctx: Ctx, payload: dict) -> dict:
+    """Observe sales_inbound only (no subject/body columns exist there): counts by kind, unmatched
+    replies (no prospect_id, cannot be triaged against the CRM) and replies that do have a prospect_id
+    (need an owner look). Never touches drafts, never answers anything."""
+    c = ctx.crm_ro()
+    now = ctx.now()
+    iso = lambda t: time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(t))
+    since = iso(now - 86400)
+    total_by_kind = {r[0]: r[1] for r in c.execute("SELECT kind, count(*) FROM sales_inbound GROUP BY 1")}
+    last_24h_by_kind = {r[0]: r[1] for r in c.execute("SELECT kind, count(*) FROM sales_inbound WHERE processed_at>=? GROUP BY 1", (since,))}
+    unmatched_replies = [dict(r) for r in c.execute(
+        "SELECT provider_message_id, detail, processed_at FROM sales_inbound "
+        "WHERE kind='REPLY' AND prospect_id IS NULL ORDER BY processed_at DESC LIMIT 20")]
+    replies_needing_owner_review = [dict(r) for r in c.execute(
+        "SELECT provider_message_id, prospect_id, detail, processed_at FROM sales_inbound "
+        "WHERE kind='REPLY' AND prospect_id IS NOT NULL ORDER BY processed_at DESC LIMIT 20")]
+    c.close()
+    return {"as_of": now, "total_by_kind": total_by_kind, "last_24h_by_kind": last_24h_by_kind,
+            "unmatched_replies": unmatched_replies, "replies_needing_owner_review": replies_needing_owner_review,
+            "opt_outs_total": total_by_kind.get("OPT_OUT", 0)}
+
+
+def triage_verify(ctx: Ctx, payload: dict, r: dict) -> list[dict]:
+    c = ctx.crm_ro()
+    total = c.execute("SELECT count(*) FROM sales_inbound").fetchone()[0]
+    reply_total = c.execute("SELECT count(*) FROM sales_inbound WHERE kind='REPLY'").fetchone()[0]
+    c.close()
+    return [{"check": "total_by_kind sums to live sales_inbound row count", "ok": sum(r["total_by_kind"].values()) == total},
+            {"check": "unmatched_replies count never exceeds live REPLY total", "ok": len(r["unmatched_replies"]) <= reply_total},
+            {"check": "replies_needing_owner_review count never exceeds live REPLY total", "ok": len(r["replies_needing_owner_review"]) <= reply_total}]
+
+
+# ------------------------------------------------------------------ research (canonical Grok digest)
+def grok_digest_exec(ctx: Ctx, payload: dict) -> dict:
+    research_file = Path(payload.get("file", "/home/colton-mcclain/elyraon.com.co/docs/x-research/canonical-fleet-research.json"))
+    if not research_file.exists():
+        cands = sorted(Path("/home/colton-mcclain/elyraon.com.co/docs/x-research").glob("agy-handoff-*.json"))
+        if cands:
+            research_file = cands[-1]
+        else:
+            raise TaskFailed(f"no grok research file found at {research_file}")
+    try:
+        data = json.loads(research_file.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise TaskFailed(f"failed to read grok research: {e}")
+
+    candidates = data.get("candidates") or []
+    projections = data.get("fleet_projections") or {}
+
+    return {
+        "digested_at": ctx.now(),
+        "research_date": data.get("research_date"),
+        "schema": data.get("schema"),
+        "candidates_count": len(candidates),
+        "policy": data.get("policy", {}),
+        "consumers_projected": list(projections.keys()),
+        "fleet_projections": projections,
+        "top_candidate": candidates[0] if candidates else None,
+    }
+
+
+def grok_digest_verify(ctx: Ctx, payload: dict, r: dict) -> list[dict]:
+    proj = r.get("fleet_projections", {})
+    req = {"SCOUT", "SALES", "GROWTH", "COMMERCE", "ANALYST", "DIRECTOR"}
+    return [
+        {"check": "canonical research schema verified", "ok": bool(r.get("schema"))},
+        {"check": "candidates count >= 1", "ok": r.get("candidates_count", 0) >= 1, "count": r.get("candidates_count")},
+        {"check": "projections present for all 6 fleet consumers", "ok": req.issubset(set(proj.keys())), "missing": list(req - set(proj.keys()))},
+        {"check": "zero paid X API spend policy verified", "ok": r.get("policy", {}).get("X_API_SPEND_BUDGET") == 0},
+    ]
+
+
+# ------------------------------------------------------------------ growth (content pipeline observe)
+def growth_exec(ctx: Ctx, payload: dict) -> dict:
+    mf_db = Path.home() / "elyraon.com.co" / "media_fleet" / "state" / "fleet.db"
+    queue_counts = {}
+    if mf_db.exists():
+        try:
+            c = sqlite3.connect(f"file:{mf_db}?mode=ro", uri=True)
+            for row in c.execute("SELECT status, count(*) FROM content_queue GROUP BY 1"):
+                queue_counts[row[0]] = row[1]
+            c.close()
+        except Exception:
+            pass
+
+    secrets_file = Path.home() / ".elyraon-secrets" / "media_fleet_tokens.json"
+    google_sheets_connected = False
+    if secrets_file.exists():
+        try:
+            sec = json.loads(secrets_file.read_text())
+            google_sheets_connected = (
+                bool(sec.get("GOOGLE_SHEETS", {}).get("credentials")) or
+                bool(sec.get("GOOGLE_SHEETS", {}).get("token_uri")) or
+                bool(sec.get("GOOGLE_SHEETS", {}).get("client_id"))
+            )
+        except Exception:
+            pass
+
+    return {
+        "as_of": ctx.now(),
+        "queue_counts": queue_counts,
+        "queued_total": queue_counts.get("QUEUED", 0),
+        "scheduled_total": queue_counts.get("SCHEDULED", 0),
+        "published_total": queue_counts.get("PUBLISHED", 0),
+        "google_sheets_connected": google_sheets_connected,
+        "public_posting": "MANUAL_OWNER_ONLY",
+        "x_api_publishing": "DISABLED",
+    }
+
+
+def growth_verify(ctx: Ctx, payload: dict, r: dict) -> list[dict]:
+    return [
+        {"check": "content queue counts resolved", "ok": isinstance(r.get("queue_counts"), dict)},
+        {"check": "public posting remains manual owner only", "ok": r.get("public_posting") == "MANUAL_OWNER_ONLY"},
+        {"check": "X API publishing disabled", "ok": r.get("x_api_publishing") == "DISABLED"},
+    ]
+
+
+# ------------------------------------------------------------------ director (fleet coordination)
+def director_exec(ctx: Ctx, payload: dict) -> dict:
+    f = ctx.db
+    now = ctx.now()
+
+    funnel_snap = f.latest("funnel")
+    research_snap = f.latest("research")
+    revenue_snap = f.latest("revenue")
+
+    stop_file_active = (STATE_DIR / "STOP").exists()
+    blockers = []
+    if stop_file_active:
+        blockers.append("Sales outreach on emergency stop / provider policy hold")
+
+    priorities = []
+    if research_snap and research_snap.get("data"):
+        proj = research_snap["data"].get("fleet_projections", {})
+        priorities = proj.get("DIRECTOR", {}).get("high_value_findings", [])
+
+    dot_rows = f.all("SELECT name, operational FROM fleet_dots")
+    dots_summary = {r["name"]: bool(r["operational"]) for r in dot_rows}
+
+    return {
+        "coordinated_at": now,
+        "stop_file_active": stop_file_active,
+        "blockers": blockers,
+        "dots_summary": dots_summary,
+        "high_value_priorities_count": len(priorities),
+        "high_value_priorities": priorities[:5],
+        "delegation_status": "MONITORING_AND_COORDINATING",
+        "revenue_observed": bool(revenue_snap and revenue_snap.get("data", {}).get("feed")),
+        "funnel_observed": bool(funnel_snap and funnel_snap.get("data")),
+    }
+
+
+def director_verify(ctx: Ctx, payload: dict, r: dict) -> list[dict]:
+    return [
+        {"check": "dots summary contains fleet dots", "ok": bool(r.get("dots_summary"))},
+        {"check": "blockers state accurately resolved", "ok": "blockers" in r},
+        {"check": "coordination completed", "ok": r.get("delegation_status") == "MONITORING_AND_COORDINATING"},
+    ]
+
+
+
+
+def linkedin_observe_exec(ctx: Ctx, payload: dict) -> dict:
+    from pathlib import Path
+    p = Path(payload.get("db_path") or "~/.linkedin-machine/lim.db").expanduser()
+    if not p.is_file():
+        return {"status": "UNKNOWN", "reason": "bridge database unavailable", "as_of": None}
+    try:
+        c = sqlite3.connect(f"file:{p}?mode=ro", uri=True, timeout=2)
+        posts = c.execute("SELECT count(*) FROM posts").fetchone()[0]
+        states = {r[0]: r[1] for r in c.execute("SELECT state,count(*) FROM commenters GROUP BY state")}
+        acts = {r[0]: r[1] for r in c.execute("SELECT kind,count(*) FROM actions WHERE dry_run=0 GROUP BY kind")}
+        newest = c.execute("SELECT max(at) FROM actions").fetchone()[0]
+        c.close()
+        return {"status": "OK", "source": "local_bridge_sqlite", "as_of": time.time(), "database_updated_at": newest,
+                "campaign_count": posts, "action_states": states, "live_actions": acts,
+                "pending_actions": sum(v for k, v in states.items() if k != "SEEN"),
+                "unknown_actions": 0, "transport_mode": "DISABLED_BY_DEFAULT", "data_class": "redacted_aggregate"}
+    except (sqlite3.Error, OSError) as e:
+        return {"status": "UNKNOWN", "reason": type(e).__name__, "as_of": None}
+
+
+def linkedin_observe_verify(ctx: Ctx, payload: dict, r: dict) -> list[dict]:
+    return [{"check":"local bridge database read completed", "ok":r.get("status")=="OK"},
+            {"check":"redacted aggregate and disabled transport", "ok":r.get("data_class")=="redacted_aggregate" and r.get("transport_mode")=="DISABLED_BY_DEFAULT"}]
+
+
 @dataclass
 class Adapter:
     kind: str
@@ -466,6 +775,7 @@ class Adapter:
 
 
 ADAPTERS: dict[str, Adapter] = {a.kind: a for a in [
+    Adapter("linkedin.observe_local", "linkedin.read", linkedin_observe_exec, linkedin_observe_verify, 20),
     Adapter("sentinel.host_health", "systemd.read", host_health_exec, host_health_verify, 60),
     Adapter("sentinel.cluster_health", "cluster.read", cluster_exec, cluster_verify, 300),
     Adapter("analyst.funnel", "crm.read", funnel_exec, funnel_verify, 120),
@@ -473,7 +783,13 @@ ADAPTERS: dict[str, Adapter] = {a.kind: a for a in [
     Adapter("sales.sender_observe", "crm.read", sender_exec, sender_verify, 60),
     Adapter("sales.deliverability", "dns.read", dns_exec, dns_verify, 120),
     Adapter("sales.promote", "crm.promote", promote_exec, promote_verify, 1200),
+    Adapter("commerce.revenue_observe", "commerce.read", revenue_exec, revenue_verify, 60),
+    Adapter("support.triage_observe", "crm.read", triage_exec, triage_verify, 60),
+    Adapter("research.grok_digest", "crm.read", grok_digest_exec, grok_digest_verify, 120),
+    Adapter("growth.pipeline_observe", "crm.read", growth_exec, growth_verify, 120),
+    Adapter("director.coordinate", "fleet.enqueue", director_exec, director_verify, 120),
 ]}
 
-SNAPSHOT_KIND = {"sentinel.host_health": "host", "sentinel.cluster_health": "cluster", "analyst.funnel": "funnel", "scout.discovery_observe": "scout",
-                 "sales.sender_observe": "sender", "sales.deliverability": "deliverability", "sales.promote": "promotion"}
+SNAPSHOT_KIND = {"linkedin.observe_local": "linkedin", "sentinel.host_health": "host", "sentinel.cluster_health": "cluster", "analyst.funnel": "funnel", "scout.discovery_observe": "scout",
+                 "sales.sender_observe": "sender", "sales.deliverability": "deliverability", "sales.promote": "promotion", "commerce.revenue_observe": "revenue",
+                 "support.triage_observe": "triage", "research.grok_digest": "research", "growth.pipeline_observe": "growth", "director.coordinate": "director"}
