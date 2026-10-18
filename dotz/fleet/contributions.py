@@ -10,12 +10,15 @@ import hashlib
 import json
 import os
 import sqlite3
+import tempfile
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from pathlib import Path
+from typing import ClassVar
 
 from dotz.fleet.db import DB_PATH
 
@@ -31,29 +34,98 @@ CREATE TABLE IF NOT EXISTS contribution_jobs(
   number INTEGER NOT NULL, status TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0,
   evidence TEXT, draft TEXT, created_at REAL NOT NULL, updated_at REAL NOT NULL);
 CREATE INDEX IF NOT EXISTS ix_contribution_jobs_day ON contribution_jobs(created_at);
+CREATE TABLE IF NOT EXISTS contribution_runs(
+  run_id TEXT PRIMARY KEY, status TEXT NOT NULL, detail TEXT, created_at REAL NOT NULL);
+CREATE INDEX IF NOT EXISTS ix_contribution_runs_created ON contribution_runs(created_at);
 """
 
 
 @dataclass(frozen=True)
 class HunterConfig:
     enabled: bool = True
-    fixes_per_day: int = 1
-    max_concurrent: int = 1
-    candidates_per_run: int = 50
+    fix_jobs_per_day: int = 1
+    max_concurrent_fixes: int = 1
+    discovery_candidates_per_run: int = 50
     min_issue_score: float = 75
-    max_attempts: int = 2
-    max_work_hours: float = 3
-    external_submission: bool = False
+    max_attempts_per_issue: int = 2
+    max_work_hours_per_fix: float = 3
+    auto_external_submission: bool = False
+    daily_budget_usd: float = 0
+
+    # Compatibility with the names used by the original hunter core.
+    @property
+    def fixes_per_day(self): return self.fix_jobs_per_day
+    @property
+    def max_concurrent(self): return self.max_concurrent_fixes
+    @property
+    def candidates_per_run(self): return self.discovery_candidates_per_run
+    @property
+    def max_attempts(self): return self.max_attempts_per_issue
+    @property
+    def max_work_hours(self): return self.max_work_hours_per_fix
+    @property
+    def external_submission(self): return self.auto_external_submission
+
+    ENV_KEYS: ClassVar[dict[str, str]] = {
+        "enabled": "FETT_ENABLED", "fix_jobs_per_day": "FETT_FIX_JOBS_PER_DAY",
+        "max_concurrent_fixes": "FETT_MAX_CONCURRENT_FIXES",
+        "discovery_candidates_per_run": "FETT_DISCOVERY_CANDIDATES_PER_RUN",
+        "min_issue_score": "FETT_MIN_ISSUE_SCORE",
+        "max_attempts_per_issue": "FETT_MAX_ATTEMPTS_PER_ISSUE",
+        "max_work_hours_per_fix": "FETT_MAX_WORK_HOURS_PER_FIX",
+        "auto_external_submission": "FETT_AUTO_EXTERNAL_SUBMISSION",
+        "daily_budget_usd": "FETT_DAILY_BUDGET_USD",
+    }
+
+    def validate(self) -> "HunterConfig":
+        if self.fix_jobs_per_day < 0 or self.max_concurrent_fixes < 0 or self.discovery_candidates_per_run < 1:
+            raise ValueError("job, concurrency, and candidate limits must be non-negative (candidates >= 1)")
+        if not 0 <= self.min_issue_score <= 100:
+            raise ValueError("min_issue_score must be between 0 and 100")
+        if self.max_attempts_per_issue < 1 or self.max_work_hours_per_fix <= 0 or self.daily_budget_usd < 0:
+            raise ValueError("attempts and work hours must be positive; budget must be non-negative")
+        return self
+
+    @classmethod
+    def load(cls, path: Path | str | None = None) -> "HunterConfig":
+        path = Path(path or os.environ.get("FETT_HUNTER_CONFIG", Path.home() / ".config" / "dotz" / "pr_hunter.json"))
+        values = {k: getattr(cls(), k) for k in cls.ENV_KEYS}
+        if path.exists():
+            try:
+                data = json.loads(path.read_text())
+            except (OSError, ValueError) as exc:
+                raise ValueError(f"invalid hunter config {path}") from exc
+            if not isinstance(data, dict):
+                raise ValueError("hunter config must be a JSON object")
+            values.update({k: data[k] for k in values if k in data})
+        for field, env_key in cls.ENV_KEYS.items():
+            if env_key in os.environ:
+                raw = os.environ[env_key]
+                values[field] = (raw.lower() in {"1", "true", "yes", "on"} if isinstance(getattr(cls(), field), bool)
+                                 else type(getattr(cls(), field))(raw))
+        return cls(**values).validate()
+
+    def save(self, path: Path | str | None = None) -> Path:
+        self.validate()
+        target = Path(path or os.environ.get("FETT_HUNTER_CONFIG", Path.home() / ".config" / "dotz" / "pr_hunter.json"))
+        target.parent.mkdir(parents=True, exist_ok=True)
+        payload = {k: getattr(self, k) for k in self.ENV_KEYS}
+        fd, temp_name = tempfile.mkstemp(prefix=f".{target.name}.", dir=target.parent)
+        try:
+            with os.fdopen(fd, "w") as f:
+                json.dump(payload, f, indent=2, sort_keys=True)
+                f.write("\n")
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temp_name, target)
+        finally:
+            if os.path.exists(temp_name):
+                os.unlink(temp_name)
+        return target
 
     @classmethod
     def from_env(cls) -> "HunterConfig":
-        b = lambda k, d: os.environ.get(k, str(d)).lower() in {"1", "true", "yes", "on"}
-        i = lambda k, d: int(os.environ.get(k, str(d)))
-        return cls(b("FETT_ENABLED", True), i("FETT_FIX_JOBS_PER_DAY", 1),
-                   i("FETT_MAX_CONCURRENT_FIXES", 1), i("FETT_DISCOVERY_CANDIDATES_PER_RUN", 50),
-                   float(os.environ.get("FETT_MIN_ISSUE_SCORE", "75")), i("FETT_MAX_ATTEMPTS_PER_ISSUE", 2),
-                   float(os.environ.get("FETT_MAX_WORK_HOURS_PER_FIX", "3")),
-                   b("FETT_AUTO_EXTERNAL_SUBMISSION", False))
+        return cls.load()
 
 
 def _db(path: Path | str = DB_PATH) -> sqlite3.Connection:
@@ -128,28 +200,35 @@ def run_once(client: GitHubClient, config: HunterConfig | None = None, db_path: 
              now: float | None = None) -> dict | None:
     """Discover and queue the best issue, subject to the daily and concurrency gates."""
     config, now = config or HunterConfig.from_env(), time.time() if now is None else now
-    if not config.enabled or config.fixes_per_day < 1:
+    if not config.enabled or config.fix_jobs_per_day < 1:
         return None
     c = _db(db_path)
     try:
-        day = now - 86400
+        day = datetime.fromtimestamp(now, timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+        tomorrow = day + 86400
         active = c.execute("SELECT count(*) FROM contribution_jobs WHERE status IN ('QUEUED','RUNNING','VERIFYING','DRAFT')").fetchone()[0]
-        made = c.execute("SELECT count(*) FROM contribution_jobs WHERE created_at>=?", (day,)).fetchone()[0]
-        if active >= config.max_concurrent or made >= config.fixes_per_day:
+        made = c.execute("SELECT count(*) FROM contribution_jobs WHERE created_at>=? AND created_at<?", (day, tomorrow)).fetchone()[0]
+        if active >= config.max_concurrent_fixes or made >= config.fix_jobs_per_day:
             return None
         candidates = discover(client, config)
         for item in candidates:
             url = item["html_url"]
             repo = (item.get("repository") or {}).get("full_name") or item.get("repository_url", "").split("/repos/", 1)[-1]
             number = item["number"]
-            if c.execute("SELECT 1 FROM contribution_candidates WHERE issue_url=?", (url,)).fetchone():
+            if c.execute("SELECT 1 FROM contribution_candidates WHERE issue_url=? OR (repository=? AND number=?)",
+                         (url, repo, number)).fetchone():
                 continue
             score = score_issue(item)
             c.execute("INSERT INTO contribution_candidates VALUES(?,?,?,?,?,?,?,?)", (url, repo, number, item["title"], json.dumps(item), score, "SELECTED", now))
             jid = "FETT-" + hashlib.sha256(url.encode()).hexdigest()[:12].upper()
             c.execute("INSERT INTO contribution_jobs VALUES(?,?,?,?,?,?,?,?,?,?)", (jid, url, repo, number, "QUEUED", 0, None, None, now, now))
             return {"job_id": jid, "issue_url": url, "repository": repo, "number": number, "score": score, "status": "QUEUED"}
-        return None
+        run_id = "RUN-" + hashlib.sha256(f"{now}:{day}".encode()).hexdigest()[:12].upper()
+        detail = {"reason": "no issue met min_issue_score", "min_issue_score": config.min_issue_score,
+                  "candidates": len(candidates)}
+        c.execute("INSERT OR REPLACE INTO contribution_runs VALUES(?,?,?,?)",
+                  (run_id, "NO_QUALIFIED_ISSUE", json.dumps(detail), now))
+        return {"run_id": run_id, "status": "NO_QUALIFIED_ISSUE", **detail}
     finally:
         c.close()
 
