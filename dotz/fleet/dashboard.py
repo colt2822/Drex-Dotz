@@ -1,4 +1,4 @@
-"""DREX FLEET COMMAND: read-only dashboard. GET-only, bound to 127.0.0.1, real data only.
+"""DREX FLEET COMMAND: dashboard. Read-only except the Director owner actions; bound to 127.0.0.1, real data only.
 
 Every figure carries its source and timestamp; the UI marks it STALE past `stale_after_s` and UNKNOWN when no
 real source exists. Nothing here writes to the CRM, the fleet queue or any service.
@@ -155,7 +155,8 @@ def build(view: str) -> dict:
         elif view == "growth":
             out |= {"growth": snap(f, "growth")}
         elif view == "director":
-            out |= {"director": snap(f, "director")}
+            from dotz.fleet import director
+            out |= {"director": snap(f, "director"), **director.snapshot()}
         elif view == "system":
             out |= {"host": snap(f, "host"), "cluster": snap(f, "cluster"), "workers": core["workers"],
                     "dead": rows(f, "SELECT task_id,dot,kind,attempts,last_error,updated_at FROM fleet_tasks WHERE status IN ('DEAD','FAILED') ORDER BY updated_at DESC LIMIT 25"),
@@ -200,6 +201,12 @@ class H(BaseHTTPRequestHandler):
             return self._send(200, page_content.encode("utf-8"), "text/html")
         if path == "/healthz":
             return self._send(200, b'{"ok":true}')
+        if path.startswith("/api/director/goals/"):
+            from dotz.fleet import director
+            try:
+                return self._send(200, json.dumps({"ok": True, "goal": director.get_goal(path.rsplit("/", 1)[1])}).encode())
+            except director.DirectorError as e:
+                return self._send(e.http, json.dumps({"ok": False, "error": str(e)}).encode())
         if path.startswith("/api/"):
             try:
                 return self._send(200, json.dumps(build(path[5:]), default=str).encode())
@@ -209,7 +216,42 @@ class H(BaseHTTPRequestHandler):
 
     def _deny(self):
         self._send(405, b'{"error":"read-only dashboard"}')
-    do_POST = do_PUT = do_DELETE = do_PATCH = _deny
+
+    def do_POST(self):
+        host = (self.headers.get("Host") or "").rsplit(":", 1)[0] if not (self.headers.get("Host") or "").startswith("[") else "[::1]"
+        if host not in OK_HOSTS:
+            return self._send(403, b'{"error":"host not allowed"}')
+        path = self.path.split("?")[0]
+        if path.startswith("/api/director/"):
+            return self._director_post(path)
+        self._deny()
+
+    def _director_post(self, path):
+        """Owner actions. JSON content type forces a CORS preflight (never granted) and a foreign Origin is refused."""
+        from dotz.fleet import director
+        origin = self.headers.get("Origin")
+        if origin and origin.split("://", 1)[-1].rsplit(":", 1)[0] not in OK_HOSTS:
+            return self._send(403, b'{"ok":false,"error":"origin not allowed"}')
+        if not (self.headers.get("Content-Type") or "").startswith("application/json"):
+            return self._send(415, b'{"ok":false,"error":"application/json required"}')
+        try:
+            body = json.loads(self.rfile.read(min(int(self.headers.get("Content-Length") or 0), 20000)) or b"{}")
+            parts = path.strip("/").split("/")          # api director goals [id [action]]
+            if parts == ["api", "director", "goals"]:
+                g = director.create_goal(body.get("goal"), body.get("project"), body.get("client_key"))
+            elif len(parts) == 5 and parts[3] and parts[4] in ("pause", "resume", "cancel"):
+                g = director.control(parts[3], parts[4])
+            else:
+                return self._send(404, b'{"ok":false,"error":"unknown director action"}')
+            return self._send(200, json.dumps({"ok": True, "goal": g}, default=str).encode())
+        except director.DirectorError as e:
+            return self._send(e.http, json.dumps({"ok": False, "error": str(e)}).encode())
+        except (ValueError, AttributeError):
+            return self._send(400, b'{"ok":false,"error":"invalid request"}')
+        except Exception as e:
+            return self._send(500, json.dumps({"ok": False, "error": type(e).__name__}).encode())
+
+    do_PUT = do_DELETE = do_PATCH = _deny
 
 
 def main(port: int = 8795) -> None:

@@ -27,13 +27,33 @@ td{padding:5px 6px;border-bottom:1px solid #202023;vertical-align:top;word-break
 pre{white-space:pre-wrap;margin:0;font-size:11px;color:var(--dim);max-height:220px;overflow:auto}
 .dim{color:var(--dim)}.bad{color:var(--bad)}.ok{color:var(--ok)}.sig{color:var(--sig)}
 footer{padding:14px 16px;color:var(--dim);font-size:10px;letter-spacing:.1em;border-top:1px solid var(--line)}
-@media(max-width:600px){main{padding:10px}.grid.w2{grid-template-columns:1fr}.v{font-size:22px}}
+.btn{background:var(--panel2);color:var(--ink);border:1px solid var(--line);padding:5px 12px;font-family:var(--mono);font-size:11px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase}
+.btn:hover{background:var(--line);border-color:var(--sig);color:var(--sig)}
+.btn-sig{background:var(--sig);color:#000;border-color:var(--sig);font-weight:700}
+.btn-sig:hover{background:#ffd924}
+.btn-bad{background:#2a1212;border-color:var(--bad);color:var(--bad)}
+.btn-bad:hover{background:var(--bad);color:#000}
+.director-input{width:100%;background:#0d0d0f;color:#e9e6da;border:1px solid var(--line);font-family:var(--mono);font-size:12px;padding:8px 12px;box-sizing:border-box}
+.director-input:focus{outline:1px solid var(--sig);border-color:var(--sig)}
+.director-board{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:start;margin-top:14px}
+.director-col{background:#0e0e11;border:1px solid var(--line);padding:10px;min-height:360px;display:flex;flex-direction:column;gap:10px}
+.director-col-header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:6px;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase}
+.director-card{background:var(--panel);border:1px solid var(--line);padding:10px 12px;cursor:pointer;position:relative;transition:border-color .15s ease}
+.director-card:hover{border-color:var(--sig);background:var(--panel2)}
+.director-card .title{font-size:13px;font-weight:700;color:var(--ink);margin:4px 0 6px 0;line-height:1.3}
+.director-card .desc{font-size:11px;color:var(--dim);margin-bottom:8px;line-height:1.4}
+.director-card .progress-box{font-size:11px;color:var(--ink);background:rgba(255,255,255,0.03);border:1px solid #202025;padding:5px 8px;margin:6px 0}
+.director-card .meta{display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--dim);margin-top:6px;flex-wrap:wrap;gap:4px}
+.director-modal-backdrop{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
+.director-modal-content{background:var(--panel);border:2px solid var(--sig);max-width:760px;width:100%;max-height:90vh;overflow-y:auto;padding:20px;position:relative;box-shadow:0 10px 30px rgba(0,0,0,0.8)}
+@media(max-width:960px){.director-board{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){main{padding:10px}.grid.w2{grid-template-columns:1fr}.v{font-size:22px}.director-board{grid-template-columns:1fr}}
 </style></head><body>
-<header><div class="logo">DREX FLEET COMMAND<small>ELYREON // READ-ONLY // LOCALHOST</small></div>
+<header><div class="logo">DREX FLEET COMMAND<small>ELYREON // LOCALHOST</small></div>
 <nav id="nav"></nav><div class="stat" id="stat">connecting…</div></header><div class="stripe"></div>
-<main id="main"></main><footer>REAL DATA ONLY · UNKNOWN = no source wired · STALE = older than the metric's freshness bound · auto-refresh 10 s · GET-only, no controls</footer>
+<main id="main"></main><footer>REAL DATA ONLY · UNKNOWN = no source wired · STALE = older than the metric's freshness bound · auto-refresh 10 s · owner controls: Director</footer>
 <script>
-const VIEWS=["overview","dots","sales","revenue","linkedin","system","model_usage"];let view=(location.hash||"#overview").slice(1);if(!VIEWS.includes(view))view="overview";
+const VIEWS=["overview","director","dots","sales","revenue","linkedin","system","model_usage"];let view=(location.hash||"#overview").slice(1);if(!VIEWS.includes(view))view="overview";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const age=s=>s==null?"never":s<90?Math.round(s)+"s":s<5400?Math.round(s/60)+"m":s<172800?(s/3600).toFixed(1)+"h":Math.round(s/86400)+"d";
 const N=v=>v==null?"—":Number(v).toLocaleString();
@@ -43,6 +63,7 @@ function card(k,v,src,asof,bound,cls){return `<div class="card"><div class="k">$
 function unk(k,why){return `<div class="card"><div class="k">${esc(k)}</div><div class="v"><span class="dim">UNKNOWN</span></div><div class="src">${esc(why)} <span class="tag t-unk">NO SOURCE</span></div></div>`}
 function table(cols,rows,fmt){if(!rows||!rows.length)return `<div class="dim">none</div>`;return `<table><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join("")}</tr>${rows.map(r=>`<tr>${fmt(r).map(x=>`<td>${x}</td>`).join("")}</tr>`).join("")}</table>`}
 const stTag=s=>({SUCCEEDED:"t-ok",DEAD:"t-bad",RETRY:"t-stale",LEASE_EXPIRED:"t-stale",active:"t-ok"}[s]||"t-no");
+const stTagGoal=s=>({QUEUED:"t-unk",RUNNING:"t-stale",BLOCKED:"t-bad",COMPLETED:"t-ok"}[s]||"t-no");
 function tasksCards(c,l){const g=(o,k)=>(o||{})[k]||0;return card("Tasks succeeded · 24h",N(g(l,"SUCCEEDED")),"fleet.db fleet_tasks",NOW,60)+card("Failed / dead-letter",N(g(c,"DEAD")+g(c,"FAILED")),"all time · bounded retries then DEAD",NOW,60,g(c,"DEAD")?"bad":"")+card("Queued · leased",N(g(c,"QUEUED"))+" · "+N(g(c,"LEASED")),"fleet.db",NOW,60)}
 const ZERO_DEC=new Set(["bif","clp","djf","gnf","jpy","kmf","krw","mga","pyg","rwf","ugx","vnd","vuv","xaf","xof","xpf"]);
 function money(m,c){if(m==null)return null;const a=Math.abs(m);const t=ZERO_DEC.has(c)?String(a):Math.floor(a/100)+"."+String(a%100).padStart(2,"0");return (m<0?"-":"")+t+" "+String(c).toUpperCase()}
@@ -62,7 +83,94 @@ return banner+heads+`<h2>Periods</h2><div class="card">${table(["period","orders
 <h2>Revenue exceptions</h2><div class="card ${ex.length?"bad":""}">${ex.length?table(["severity","kind","ref","detail"],ex,x=>[esc(x.severity),esc(x.kind),esc(x.ref||"—"),esc(x.detail)]):'<span class="ok">none (D1 and Stripe reconcile clean)</span>'}</div>
 <h2>Latest orders (redacted)</h2><div class="card">${table(["ref","paid","amount","status","stripe","refunded"],o.latest_orders,x=>[esc(x.ref),age(NOW-x.paid_at)+" ago",esc(money(x.amount_minor,x.currency)),`<span class="tag ${x.status==="fulfilled"?"t-ok":x.status==="delivery_failed"||x.status==="delivery_unknown"?"t-bad":"t-stale"}">${esc(x.status)}</span>`,x.stripe_verified==null?"UNKNOWN":x.stripe_verified?"verified":"NOT FOUND",x.refunded_minor==null?"UNKNOWN":esc(money(x.refunded_minor,x.currency))])}</div>
 <h2>Funnel</h2><div class="grid">${unk("Visits",fn.visits_reason)}${card("Checkout starts · 30d",N((fn.checkout_starts||{})["30d"]),fn.source,rv.as_of,900)}${card("Purchases · 30d",N((fn.purchases||{})["30d"]),"paid sessions",rv.as_of,900)}${card("Checkout→purchase · 30d",pct((fn.checkout_to_purchase_rate||{})["30d"]),"paid ÷ started (NOT visit conversion)",rv.as_of,900)}${unk("Visit→purchase conversion","needs visit instrumentation")}</div>`}
+// ==========================================
+// DIRECTOR: owner goals -> /api/director (server-side NOVA general-task API). Real persisted state only.
+// ==========================================
+const DirectorAPI={
+  async _post(path,body){const r=await fetch("/api/director"+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})});
+    let d;try{d=await r.json()}catch(e){throw new Error("backend returned "+r.status)}if(!d.ok)throw new Error(d.error||("HTTP "+r.status));return d.goal},
+  createGoal(goal,project,client_key){return this._post("/goals",{goal,project,client_key})},
+  act(id,action){return this._post("/goals/"+encodeURIComponent(id)+"/"+action,{})}
+};
+window.directorDraft=window.directorDraft||{text:"",project:"",key:null};
+const dGoals=()=>((window.lastData||{}).goals||[]);
+const dTag=g=>g.state==="FAILED"||g.state==="CANCELLED"?`<span class="tag t-bad">${esc(g.state)}</span>`:g.state==="PAUSED"?`<span class="tag t-stale">PAUSED</span>`:`<span class="tag ${stTagGoal(g.status)}">${esc(g.state==="SUBMITTING"?"SUBMITTING":g.status)}</span>`;
+const dBox=t=>`background:#0d0d0f;border:1px solid var(--line);padding:8px 10px;margin-top:4px;white-space:pre-wrap;word-break:break-word`;
+function directorOpenGoal(id){window.directorActiveGoalId=id;directorRenderModal()}
+function directorRenderModal(){
+  const id=window.directorActiveGoalId;if(!id)return;const g=dGoals().find(x=>x.id===id);if(!g)return;
+  let m=document.getElementById("director-modal");if(!m){m=document.createElement("div");m.id="director-modal";m.className="director-modal-backdrop";document.body.appendChild(m)}
+  const ev=g.evidence||{},dx=g.drex||{},t=g.tests,A=g.supported_actions||[];
+  const gates=ev.gates?Object.entries(ev.gates).map(([k,v])=>`<span class="tag ${v?"t-ok":"t-bad"}">${esc(k)} ${v?"✓":"✗"}</span>`).join(" "):'<span class="dim">no terminal evidence yet</span>';
+  const ctl=(a,l,c)=>A.includes(a)?`<button class="btn ${c||""}" onclick="directorAction('${a}','${esc(g.id)}')">${l}</button>`:`<button class="btn ${c||""}" disabled style="opacity:.4;cursor:not-allowed">${l}</button>`;
+  m.style.display="flex";
+  m.innerHTML=`<div class="director-modal-content">
+  <div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:14px">
+    <div><div class="k">Director goal</div><div style="font-size:16px;font-weight:700;color:var(--sig)">${esc(g.id)}: ${esc(g.title)}</div>
+    <div style="margin-top:4px">${dTag(g)} <span class="tag t-no">project ${esc(g.project)}</span> <span class="tag t-no">worker ${esc(g.worker)}</span></div></div>
+    <button class="btn" onclick="directorCloseModal()">✕ CLOSE</button></div>
+  <div style="display:flex;flex-direction:column;gap:12px">
+   <div><div class="k">Original objective (verbatim · sha256 ${esc(g.objective_sha256.slice(0,12))}…)</div><div style="font-size:13px;${dBox()}">${esc(g.original_goal)}</div></div>
+   <div><div class="k">Status</div><div style="font-size:12px;margin-top:4px">${esc(g.activity||"—")}${g.poll_error?`<div class="bad">${esc(g.poll_error)}</div>`:""}</div>
+     <div class="src">NOVA task ${esc(g.task_id||"not yet admitted")} · FETT-Lite job ${esc(g.job_id||"—")} · dispatch attempts ${esc(g.attempts)}/3 · updated ${age(NOW-g.updated_at)} ago</div></div>
+   <div><div class="k">Blocker</div>${g.blocker?`<div class="bad" style="font-weight:700;margin-top:4px">⚠ ${esc(g.blocker)}</div>`:'<div class="ok" style="margin-top:4px">none</div>'}</div>
+   <div><div class="k">Drex authorization / isolation</div>${dx.drex_action_id||dx.drex_allow!=null?`<div style="font-size:12px;margin-top:4px">Drex ${dx.drex_allow?'<span class="ok">ALLOW</span>':'<span class="bad">no ALLOW</span>'} · action ${esc(dx.drex_action_id||"—")} · account fp ${esc((dx.account_fp||"—").slice(0,12))} · workspace ${esc(dx.workspace_mode||"—")} · sandbox cleanup ${dx.cleanup_complete?'<span class="ok">complete</span>':'<span class="bad">not confirmed</span>'} · authorization consumed ${esc(dx.authorization_consumed)}</div>`:'<div class="dim" style="margin-top:4px">no Drex receipt yet</div>'}</div>
+   <div><div class="k">Independent tests</div>${t?`<div style="font-size:12px;margin-top:4px">${t.passed?'<span class="ok">PASSED</span>':'<span class="bad">NOT PASSED</span>'}${t.reason?" · "+esc(t.reason):""}${(t.runs||[]).map(r=>`<div class="dim">${esc(r.command)} → rc ${esc(r.returncode)} · ${esc(r.tests)} tests</div>`).join("")}</div>`:'<div class="dim" style="margin-top:4px">not run yet</div>'}</div>
+   <div><div class="k">Sealed diff / receipt</div>${ev.diff_sha256?`<div style="font-size:12px;margin-top:4px">${esc(ev.changed_files.length)} file(s): ${esc(ev.changed_files.join(", "))}<br>diff ${esc(ev.diff_path)}<br>sha256 ${esc(ev.diff_sha256)} (${esc(ev.diff_bytes)} bytes) · base ${esc((ev.base_commit||"—").slice(0,12))}<br>receipt ${esc(ev.receipt_path||"—")}<br><span class="dim">Not applied to ${esc(g.project)}; apply is an owner action.</span></div>`:'<div class="dim" style="margin-top:4px">no sealed diff</div>'}
+     <div style="margin-top:6px">Completion gates: ${gates}</div></div>
+   <div><div class="k">Final output</div><div style="font-size:12px;${dBox()}">${esc(g.final_report||"Not completed.")}</div></div>
+   <div style="border-top:1px solid var(--line);padding-top:12px"><div class="k">Controls</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">${ctl("pause","Pause")}${ctl("resume","Resume")}${ctl("cancel","Cancel","btn-bad")}
+    <span class="dim src">${A.length?"Available now.":"Dispatched work cannot be paused or cancelled: the NOVA general-task API has no such operation."}</span></div>
+    <div id="director-modal-status" class="src"></div></div>
+  </div></div>`}
+function directorCloseModal(){window.directorActiveGoalId=null;const m=document.getElementById("director-modal");if(m)m.style.display="none"}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&window.directorActiveGoalId)directorCloseModal()});
+function directorDraftSave(){const t=document.getElementById("director-goal-input"),p=document.getElementById("director-project");if(t)window.directorDraft.text=t.value;if(p)window.directorDraft.project=p.value}
+async function directorAddGoal(){
+  directorDraftSave();const dr=window.directorDraft,st=document.getElementById("director-input-status"),btn=document.getElementById("director-submit");
+  const set=h=>{if(st)st.innerHTML=h};
+  if(!dr.text.trim())return set('<span class="bad">Enter a goal.</span>');
+  if(!dr.project)return set('<span class="bad">Choose a registered project.</span>');
+  if(!dr.key)dr.key=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random());
+  if(btn)btn.disabled=true;set('<span class="dim">Submitting…</span>');
+  try{const g=await DirectorAPI.createGoal(dr.text,dr.project,dr.key);
+    dr.text="";dr.key=null;const t=document.getElementById("director-goal-input");if(t)t.value="";
+    set(g.duplicate?`<span class="tag t-stale">DUPLICATE</span> already open as ${esc(g.id)}; nothing new was created`:`<span class="ok">✓ ${esc(g.id)} ${esc(g.state)}</span>`);
+    tick()}
+  catch(e){set(`<span class="bad">Refused: ${esc(e.message)}</span>`)}
+  finally{if(btn)btn.disabled=false}}
+async function directorAction(action,id){
+  const s=document.getElementById("director-modal-status");
+  try{await DirectorAPI.act(id,action);await tick();directorRenderModal()}
+  catch(e){if(s)s.innerHTML=`<span class="bad">Refused: ${esc(e.message)}</span>`}}
+
 const R={
+director(d){
+  const goals=d.goals||[],projects=d.projects||[],cols={QUEUED:[],RUNNING:[],BLOCKED:[],COMPLETED:[]};
+  goals.forEach(g=>cols[g.status].push(g));
+  const dr=window.directorDraft;
+  const renderCard=g=>`<div class="director-card" onclick="directorOpenGoal('${esc(g.id)}')">
+    <div style="display:flex;justify-content:space-between;gap:6px">${dTag(g)}<span class="dim">${esc(g.id)}</span></div>
+    <div class="title">${esc(g.title)}</div>
+    <div class="progress-box">${esc(g.activity||"—")}${g.poll_error?`<div class="bad">${esc(g.poll_error)}</div>`:""}</div>
+    ${g.blocker?`<div class="bad" style="font-size:11px;margin-bottom:4px">⚠ ${esc(g.blocker.slice(0,160))}</div>`:""}
+    ${g.state==="COMPLETED"&&g.evidence?`<div class="ok" style="font-size:11px">verified · ${esc(g.evidence.changed_files.length)} file(s) · diff ${esc(g.evidence.diff_sha256.slice(0,10))}…</div>`:""}
+    <div class="meta"><span>${esc(g.project)} · <b style="color:var(--ink)">${esc(g.worker)}</b></span><span class="dim">${esc(g.task_id||"no task yet")}</span></div></div>`;
+  const col=(n,c)=>`<div class="director-col"><div class="director-col-header"><span>${n}</span><span class="tag ${c}">${cols[n].length}</span></div>${cols[n].length?cols[n].map(renderCard).join(""):'<div class="dim" style="padding:10px;text-align:center">none</div>'}</div>`;
+  return `<h2>Director · Goal Board</h2>
+<div class="card" style="margin-bottom:14px"><span class="tag t-ok">LIVE BACKEND</span> goals persist in fleet.db · executed by ${esc(d.worker||"codex1")} through NOVA general-task API → FETT-Lite → Drex ALLOW → isolated sandbox · COMPLETED only with Drex ALLOW, sandbox cleanup, independent passing tests and a sealed diff · diffs are never applied automatically
+ <div class="src">Pause/cancel work before dispatch only; running work cannot be paused or cancelled through the NOVA general-task API. Financial, trading, deploy, credential, outbound-message, PR and delete objectives are refused for owner review.</div></div>
+<div class="grid">${card("Queued",cols.QUEUED.length,"fleet.db director_goals",NOW,60)}${card("Running",cols.RUNNING.length,"NOVA-reported",NOW,60,cols.RUNNING.length?"sig":"")}${card("Blocked / failed",cols.BLOCKED.length,"with stated blocker",NOW,60,cols.BLOCKED.length?"bad":"")}${card("Completed",cols.COMPLETED.length,"gated on verified evidence",NOW,60,"ok")}</div>
+<h2>New Goal</h2><div class="card" style="margin-bottom:16px">
+  <div class="k" style="margin-bottom:6px">What do you want ELYREON to accomplish? (sent verbatim, max 2400 chars)</div>
+  <textarea id="director-goal-input" class="director-input" rows="4" maxlength="2400" oninput="directorDraftSave()">${esc(dr.text)}</textarea>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center">
+    <select id="director-project" class="director-input" style="width:auto" onchange="directorDraftSave()"><option value="">— project —</option>${projects.map(p=>`<option value="${esc(p.slug)}" ${dr.project===p.slug?"selected":""}>${esc(p.slug)}</option>`).join("")}</select>
+    <button id="director-submit" class="btn btn-sig" onclick="directorAddGoal()">Submit Goal</button><span id="director-input-status" class="src"></span></div>
+  ${projects.length?"":'<div class="bad src">No registered projects found.</div>'}</div>
+<h2>Goal Board</h2><div class="director-board">${col("QUEUED","t-unk")}${col("RUNNING","t-stale")}${col("BLOCKED","t-bad")}${col("COMPLETED","t-ok")}</div>`;
+},
 linkedin(d){const x=d.linkedin_schedule||{},p=(x.plan||{}),posts=p.posts||[];
 if(x.status!=="READY")return `<h2>LinkedIn · manual schedule</h2><div class="card"><span class="tag t-unk">UNKNOWN</span> Schedule unavailable: ${esc(x.reason||"no schedule source")}</div>`;
 return `<h2>LinkedIn · manual post plan</h2><div class="card"><span class="tag t-stale">SUGGESTED TIMES</span> ${esc(p.note||"")}<div class="src">Campaign ${esc(p.campaign||"UNKNOWN")} · timezone ${esc(p.timezone||"UNKNOWN")} · source ${esc(x.source)} · posting and engagement are not verified</div></div>
@@ -158,8 +266,15 @@ return `<h2>Section A // Fleet Model Availability</h2>
 <h2>Section F // Provider Errors &amp; Live Alerts</h2>
 <div class="grid w2"><div class="card"><div class="k">Provider Alerts</div>${AL.length?table(["Severity","Kind","Message"],AL,a=>[`<span class="tag ${a.severity==='ok'?'t-ok':a.severity==='unknown'?'t-unk':'t-bad'}">${esc(a.severity.toUpperCase())}</span>`,esc(a.kind),esc(a.message)]):'<span class="dim">No parsed active alerts; provider availability may be UNKNOWN.</span>'}<div class="src">Expired retry windows do not certify recovery</div></div><div class="card"><div class="k">Recent HTTP 429 &amp; Rate-Limit Events</div>${RL.length?table(["When","Provider","Model","Retry After","Remaining","Error Detail"],RL.slice(0,8),r=>[age(NOW-r.ts)+" ago",esc(r.provider),esc(r.model),r.retry_after_s+"s",r.is_active?`<span class="bad">${r.remaining_s}s</span>`:'<span class="dim">window elapsed; recovery UNKNOWN</span>',esc(r.error_detail.slice(0,60))]):'<span class="dim">No rate limit events recorded in recent log window.</span>'}<div class="src">Parsed from ~/.hermes/profiles/colt2822/logs/errors.log · initiating workflow UNKNOWN unless correlated</div></div></div>`}};
 function nav(){document.getElementById("nav").innerHTML=VIEWS.map(v=>`<a href="#${v}" class="${v===view?"on":""}">${v.replace('_',' ')}</a>`).join("")}
-async function tick(){try{const r=await fetch("/api/"+view,{cache:"no-store"});const d=await r.json();NOW=d.now||Date.now()/1000;
-document.getElementById("stat").innerHTML=d.error?`<span class="bad">${esc(d.error)}</span>`:`<b>${view==="linkedin"?"LOCAL PLAN":"LIVE"}</b> ${new Date(NOW*1000).toLocaleTimeString()}`;
-if(!d.error)document.getElementById("main").innerHTML=R[view](d)}catch(e){document.getElementById("stat").innerHTML=`<span class="bad">DASHBOARD BACKEND UNREACHABLE</span>`}}
+async function tick(){try{const r=await fetch("/api/"+view,{cache:"no-store"});const d=await r.json();window.lastData=d;NOW=d.now||Date.now()/1000;
+document.getElementById("stat").innerHTML=d.error?`<span class="bad">${esc(d.error)}</span>`:`<b>${view==="linkedin"?"LOCAL PLAN":view==="director"?"DIRECTOR BOARD":"LIVE"}</b> ${new Date(NOW*1000).toLocaleTimeString()}`;
+if(!d.error){
+  if((view === "director") && document.activeElement && (document.activeElement.tagName === "TEXTAREA" || document.activeElement.tagName === "INPUT")){
+    if(view==="director")directorRenderModal();
+    return;
+  }
+  document.getElementById("main").innerHTML=R[view](d);
+  if(view==="director")directorRenderModal();
+}}catch(e){document.getElementById("stat").innerHTML=`<span class="bad">DASHBOARD BACKEND UNREACHABLE</span>`}}
 addEventListener("hashchange",()=>{view=(location.hash||"#overview").slice(1);if(!VIEWS.includes(view))view="overview";nav();tick()});nav();tick();setInterval(tick,10000);
 </script></body></html>
