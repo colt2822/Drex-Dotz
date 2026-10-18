@@ -57,7 +57,7 @@ footer{padding:14px 16px;color:var(--dim);font-size:10px;letter-spacing:.1em;bor
 <nav id="nav"></nav><div class="stat" id="stat">connecting…</div></header><div class="stripe"></div>
 <main id="main"></main><footer>REAL DATA ONLY · UNKNOWN = no source wired · STALE = older than the metric's freshness bound · auto-refresh 10 s · owner controls: Director, Upwork</footer>
 <script>
-const VIEWS=["overview","director","dots","sales","revenue","linkedin","upwork","system","model_usage"];let view=(location.hash||"#overview").slice(1);if(!VIEWS.includes(view))view="overview";
+const VIEWS=["overview","hunter","director","dots","sales","revenue","linkedin","upwork","system","model_usage"];let view=(location.hash||"#overview").slice(1);if(!VIEWS.includes(view))view="overview";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const age=s=>s==null?"never":s<90?Math.round(s)+"s":s<5400?Math.round(s/60)+"m":s<172800?(s/3600).toFixed(1)+"h":Math.round(s/86400)+"d";
 const N=v=>v==null?"—":Number(v).toLocaleString();
@@ -300,6 +300,19 @@ ${ovRev(d.revenue)}${unk("Meetings",d.unknown.meetings)}${unk("Conversions",d.un
 ${card("Fleet model spend",d.cost.fleet_model_usd==null?null:"$"+d.cost.fleet_model_usd.toFixed(4),(d.cost.calls??"?")+" model calls by fleet dots (adapters are deterministic)",NOW,3600)}
 ${unk("Luna / Codex subscription",d.unknown.luna_subscription_cost)}</div>
 <h2>Recent attempts</h2><div class="card">${table(["when","dot","kind","outcome","detail"],d.recent,x=>[age(NOW-x.at)+" ago",esc(x.dot),esc(x.kind),`<span class="tag ${stTag(x.outcome)}">${esc(x.outcome)}</span>`,esc((x.detail||"").slice(0,110))])}</div>`},
+hunter(d){const c=d.config||{},q=d.quota||{},x=d.concurrency||{},s=d.counts_by_status||{};
+return `<h2>PR Hunter · contribution pipeline</h2><div class="grid">
+${card("Jobs started today",N(q.jobs_started_today)+" / "+N(q.fix_jobs_per_day),"UTC day · contribution_jobs",NOW,60,q.utilization>=1?"bad":"ok")}
+${card("Concurrency",N(x.active)+" / "+N(x.max_concurrent_fixes),"QUEUED · RUNNING · VERIFYING",NOW,60,x.utilization>=1?"bad":"")}
+${card("Discovered / qualified",N(d.discovered)+" / "+N(d.eligible),"contribution_candidates",NOW,60)}
+${card("Draft PRs awaiting approval",N(d.drafts_awaiting_approval),"DRAFT jobs; review-only",NOW,60,d.drafts_awaiting_approval?"sig":"")}
+${card("Open / merged / rejected",N((s.draft||0)+(s.submitted||0))+" / "+N(s.merged)+" / "+N(s.rejected),"contribution_jobs lifecycle",NOW,60)}
+${card("Failures",N(d.failures),"rejected jobs",NOW,60,d.failures?"bad":"ok")}</div>
+<h2>Hunter settings</h2><div class="card"><form onsubmit="saveHunterConfig(event)" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;align-items:end">
+${[["fix_jobs_per_day","Fix jobs / day",c.fix_jobs_per_day,0,1000],["max_concurrent_fixes","Max concurrent fixes",c.max_concurrent_fixes,1,100]].map(f=>`<label><span class="k">${f[1]}</span><input class="director-input" style="margin-top:4px" type="number" name="${f[0]}" value="${esc(f[2])}" min="${f[3]}" max="${f[4]}" required></label>`).join("")}
+<label><span class="k">Enabled</span><select class="director-input" style="margin-top:4px" name="enabled"><option value="true" ${c.enabled?"selected":""}>yes</option><option value="false" ${!c.enabled?"selected":""}>no</option></select></label>
+<button class="btn btn-sig" type="submit">Save settings</button><span id="hunter-status" class="src">auto external submission: BLOCKED</span></form></div>
+<h2>Active fixes</h2><div class="card">${table(["job","repository","issue","status","attempts"],d.active_jobs,j=>[esc(j.job_id),esc(j.repository),"#"+esc(j.number),`<span class="tag t-stale">${esc(j.status)}</span>`,N(j.attempts)])}</div>`},
 dots(d){return `<h2>Dots</h2><div class="grid w2">${d.dots.map(x=>{const w=x.worker;return `<div class="card"><div class="k">${esc(x.role)} · ${esc(x.name)}</div>
 <div class="v sm">${x.operational?`<span class="tag t-ok">OPERATIONAL</span>`:`<span class="tag t-no">NOT_OPERATIONAL</span>`}${w?` <span class="tag ${w.alive?"t-ok":"t-bad"}">${w.alive?(w.current_kind?"BUSY":"IDLE"):"DOWN"}</span> <span class="dim">hb ${age(w.hb_age_s)}</span>`:""}</div>
 <p>${esc(x.mission)}</p>${x.not_operational_reason?`<p class="bad">BLOCKER: ${esc(x.not_operational_reason)}</p>`:""}
@@ -502,6 +515,7 @@ async function rejectUpworkOpportunity(key){
   }
 }
 
+async function saveHunterConfig(e){e.preventDefault();const f=new FormData(e.target),payload={fix_jobs_per_day:Number(f.get("fix_jobs_per_day")),max_concurrent_fixes:Number(f.get("max_concurrent_fixes")),enabled:f.get("enabled")==="true"};const st=document.getElementById("hunter-status");try{const r=await fetch("/api/hunter/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}),d=await r.json();st.innerHTML=d.ok?'<span class="ok">saved</span>':`<span class="bad">${esc(d.error||"save failed")}</span>`;if(d.ok)setTimeout(tick,250)}catch(err){st.innerHTML='<span class="bad">network error</span>'}}
 function nav(){document.getElementById("nav").innerHTML=VIEWS.map(v=>`<a href="#${v}" class="${v===view?"on":""}">${v.replace('_',' ')}</a>`).join("")}
 async function tick(){try{const r=await fetch("/api/"+view,{cache:"no-store"});const d=await r.json();window.lastData=d;NOW=d.now||Date.now()/1000;
 document.getElementById("stat").innerHTML=d.error?`<span class="bad">${esc(d.error)}</span>`:`<b>${view==="linkedin"?"LOCAL PLAN":view==="upwork"?"UPWORK QUEUE":view==="director"?"DIRECTOR BOARD":"LIVE"}</b> ${new Date(NOW*1000).toLocaleTimeString()}`;

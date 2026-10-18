@@ -90,8 +90,46 @@ def live_sales(now) -> dict:
         c.close()
 
 
+def hunter_snapshot(now: float) -> dict:
+    """Read-only PR Hunter telemetry from the contribution tables."""
+    from dotz.fleet.contributions import HunterConfig
+    config = HunterConfig.load()
+    empty = {"draft": 0, "submitted": 0, "merged": 0, "rejected": 0, "closed": 0}
+    c = ro(DB_PATH)
+    candidates = jobs = []
+    if c:
+        try:
+            tables = {r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            if "contribution_candidates" in tables:
+                candidates = rows(c, "SELECT issue_url,repository,number,title,score,status,discovered_at FROM contribution_candidates ORDER BY discovered_at DESC")
+            if "contribution_jobs" in tables:
+                jobs = rows(c, "SELECT job_id,issue_url,repository,number,status,attempts,created_at,updated_at FROM contribution_jobs ORDER BY updated_at DESC")
+        finally:
+            c.close()
+    statuses = dict(empty)
+    for j in jobs:
+        s = str(j.get("status", "")).lower()
+        if s in statuses: statuses[s] += 1
+    active_states = {"queued", "running", "verifying"}
+    active = [j for j in jobs if str(j.get("status", "")).lower() in active_states]
+    today = time.strftime("%Y-%m-%d", time.gmtime(now))
+    started_today = sum(1 for j in jobs if time.strftime("%Y-%m-%d", time.gmtime(j["created_at"])) == today)
+    qualified = sum(1 for x in candidates if str(x.get("status", "")).upper() in {"ELIGIBLE", "SELECTED"})
+    return {"now": now, "config": config.to_dict(),
+            "quota": {"jobs_started_today": started_today, "fix_jobs_per_day": config.fix_jobs_per_day,
+                       "utilization": started_today / config.fix_jobs_per_day if config.fix_jobs_per_day else 0},
+            "concurrency": {"active": len(active), "max_concurrent_fixes": config.max_concurrent_fixes,
+                             "utilization": len(active) / config.max_concurrent_fixes if config.max_concurrent_fixes else 0},
+            "discovered": len(candidates), "eligible": qualified,
+            "active_jobs": active, "drafts_awaiting_approval": statuses["draft"],
+            "counts_by_status": statuses, "failures": statuses["rejected"],
+            "candidates": candidates}
+
+
 def build(view: str) -> dict:
     now = time.time()
+    if view == "hunter":
+        return hunter_snapshot(now)
     f = ro(DB_PATH)
     if not f:
         return {"error": "fleet.db not found: supervisor has never run", "now": now}
@@ -227,6 +265,8 @@ class H(BaseHTTPRequestHandler):
         if host not in OK_HOSTS:
             return self._send(403, b'{"error":"host not allowed"}')
         path = self.path.split("?")[0]
+        if path == "/api/hunter/config":
+            return self._hunter_config_post()
         if path.startswith("/api/director/"):
             return self._director_post(path)
         if path.startswith("/api/upwork/"):
@@ -252,6 +292,42 @@ class H(BaseHTTPRequestHandler):
                 return self._send(200 if res.get("ok") else 400, json.dumps(res).encode())
             return self._send(404, b'{"error":"unknown upwork action"}')
         self._deny()
+
+    def _hunter_config_post(self):
+        from dataclasses import replace
+        from dotz.fleet.contributions import HunterConfig
+        if not (self.headers.get("Content-Type") or "").startswith("application/json"):
+            return self._send(415, b'{"ok":false,"error":"application/json required"}')
+        try:
+            length = min(int(self.headers.get("Content-Length") or 0), 20000)
+            payload = json.loads(self.rfile.read(length) or b"{}")
+            if not isinstance(payload, dict): raise ValueError("payload must be an object")
+            unknown = set(payload) - set(HunterConfig.ENV_KEYS)
+            if unknown: raise ValueError("unknown config key: " + sorted(unknown)[0])
+            if payload.get("auto_external_submission") is True:
+                raise ValueError("auto_external_submission cannot be enabled from the dashboard")
+            current = HunterConfig.load()
+            values = current.to_dict(); values.update(payload)
+            types = {"enabled": bool, "fix_jobs_per_day": int, "max_concurrent_fixes": int,
+                     "discovery_candidates_per_run": int, "min_issue_score": (int, float),
+                     "max_attempts_per_issue": int, "max_work_hours_per_fix": (int, float),
+                     "daily_budget_usd": (int, float), "auto_external_submission": bool}
+            for key, typ in types.items():
+                if key in payload and (isinstance(payload[key], bool) if typ is int else not isinstance(payload[key], typ)):
+                    raise ValueError(f"{key} has invalid type")
+            ranges = (("fix_jobs_per_day", 0, 1000), ("max_concurrent_fixes", 1, 100),
+                      ("discovery_candidates_per_run", 1, 10000), ("min_issue_score", 0, 100),
+                      ("max_attempts_per_issue", 1, 20), ("max_work_hours_per_fix", 0.1, 24),
+                      ("daily_budget_usd", 0, 100000))
+            for key, low, high in ranges:
+                if not low <= values[key] <= high: raise ValueError(f"{key} must be between {low} and {high}")
+            if values["auto_external_submission"]: raise ValueError("auto_external_submission cannot be enabled from the dashboard")
+            saved = HunterConfig(**values); saved.save()
+            return self._send(200, json.dumps({"ok": True, "config": saved.to_dict()}).encode())
+        except (ValueError, TypeError, json.JSONDecodeError) as e:
+            return self._send(400, json.dumps({"ok": False, "error": str(e)}).encode())
+        except OSError as e:
+            return self._send(500, json.dumps({"ok": False, "error": f"config save failed: {e}"}).encode())
 
     def _director_post(self, path):
         """Owner actions. JSON content type forces a CORS preflight (never granted) and a foreign Origin is refused."""

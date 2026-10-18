@@ -77,6 +77,12 @@ class HunterConfig:
         "daily_budget_usd": "FETT_DAILY_BUDGET_USD",
     }
 
+    @property
+    def KEYS(self): return tuple(self.ENV_KEYS)
+
+    def to_dict(self) -> dict:
+        return {k: getattr(self, k) for k in self.ENV_KEYS}
+
     def validate(self) -> "HunterConfig":
         if self.fix_jobs_per_day < 0 or self.max_concurrent_fixes < 0 or self.discovery_candidates_per_run < 1:
             raise ValueError("job, concurrency, and candidate limits must be non-negative (candidates >= 1)")
