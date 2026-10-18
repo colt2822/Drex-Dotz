@@ -447,7 +447,10 @@ def tick(config=None, db_path=DB_PATH, gh: GH | None = None, runner=run, client=
     for _ in range(5):
         last = advance(config, db_path, gh, runner, deps)
         if last["status"] == "IDLE" or (last["status"] == "REJECTED" and last.get("gate") == "preflight"):
-            claimed = C.run_once(client or C.GitHubClient(token=gh.token()), config, db_path)
+            try:
+                claimed = C.run_once(client or C.GitHubClient(token=gh.token()), config, db_path)
+            except RuntimeError as exc:   # discovery rate limit or outage: try again next tick
+                return {**last, "claim": {"status": "DISCOVERY_ERROR", "error": str(exc)}}
             if not claimed or claimed.get("status") != "QUEUED":
                 return {**last, "claim": claimed}
             continue

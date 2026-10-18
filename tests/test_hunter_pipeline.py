@@ -231,3 +231,11 @@ def test_bounty_lane_is_found_and_ranked():
             "body": "Steps to reproduce. confirmed bug expected behavior python " * 3, "state": "open",
             "repository": {"full_name": "acme/tool", "stargazers_count": 900}, "labels": [{"name": "bounty"}], "comments": 1, "user": {"type": "User"}}
     assert C.is_bounty(item) and C.eligible_issue(item)
+
+
+def test_tick_survives_discovery_failure(tmp_path):
+    class Boom:
+        def search_issues(self, *a):
+            raise RuntimeError("GitHub discovery failed: HTTPError")
+    r = H.tick(CFG, tmp_path / "f.db", FakeGH(), runner_ok, client=Boom())
+    assert r["claim"]["status"] == "DISCOVERY_ERROR"
