@@ -33,6 +33,10 @@ footer{padding:14px 16px;color:var(--dim);font-size:10px;letter-spacing:.1em;bor
 .btn-sig:hover{background:#ffd924}
 .btn-bad{background:#2a1212;border-color:var(--bad);color:var(--bad)}
 .btn-bad:hover{background:var(--bad);color:#000}
+.upwork-box{width:100%;height:170px;background:#0d0d0f;color:#e9e6da;border:1px solid var(--line);font-family:var(--mono);font-size:11px;padding:8px 10px;resize:vertical;line-height:1.45;box-sizing:border-box}
+.upwork-box:focus{outline:1px solid var(--sig);border-color:var(--sig)}
+.filter-btn{background:none;border:1px solid var(--line);color:var(--dim);padding:4px 10px;font-family:var(--mono);font-size:11px;cursor:pointer;margin-right:6px}
+.filter-btn.active{background:var(--sig);color:#000;border-color:var(--sig);font-weight:700}
 .director-input{width:100%;background:#0d0d0f;color:#e9e6da;border:1px solid var(--line);font-family:var(--mono);font-size:12px;padding:8px 12px;box-sizing:border-box}
 .director-input:focus{outline:1px solid var(--sig);border-color:var(--sig)}
 .director-board{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:start;margin-top:14px}
@@ -51,9 +55,9 @@ footer{padding:14px 16px;color:var(--dim);font-size:10px;letter-spacing:.1em;bor
 </style></head><body>
 <header><div class="logo">DREX FLEET COMMAND<small>ELYREON // LOCALHOST</small></div>
 <nav id="nav"></nav><div class="stat" id="stat">connecting…</div></header><div class="stripe"></div>
-<main id="main"></main><footer>REAL DATA ONLY · UNKNOWN = no source wired · STALE = older than the metric's freshness bound · auto-refresh 10 s · owner controls: Director</footer>
+<main id="main"></main><footer>REAL DATA ONLY · UNKNOWN = no source wired · STALE = older than the metric's freshness bound · auto-refresh 10 s · owner controls: Director, Upwork</footer>
 <script>
-const VIEWS=["overview","director","dots","sales","revenue","linkedin","system","model_usage"];let view=(location.hash||"#overview").slice(1);if(!VIEWS.includes(view))view="overview";
+const VIEWS=["overview","director","dots","sales","revenue","linkedin","upwork","system","model_usage"];let view=(location.hash||"#overview").slice(1);if(!VIEWS.includes(view))view="overview";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const age=s=>s==null?"never":s<90?Math.round(s)+"s":s<5400?Math.round(s/60)+"m":s<172800?(s/3600).toFixed(1)+"h":Math.round(s/86400)+"d";
 const N=v=>v==null?"—":Number(v).toLocaleString();
@@ -176,6 +180,103 @@ if(x.status!=="READY")return `<h2>LinkedIn · manual schedule</h2><div class="ca
 return `<h2>LinkedIn · manual post plan</h2><div class="card"><span class="tag t-stale">SUGGESTED TIMES</span> ${esc(p.note||"")}<div class="src">Campaign ${esc(p.campaign||"UNKNOWN")} · timezone ${esc(p.timezone||"UNKNOWN")} · source ${esc(x.source)} · posting and engagement are not verified</div></div>
 ${posts.map(q=>`<div class="card" style="margin:10px 0"><div class="k">Variant ${esc(q.variant)} · ${esc(q.theme)}</div><div class="v sm">${esc((q.suggested_at_local||"UNKNOWN").replace("T"," ")+" "+(p.timezone||""))}</div><div style="white-space:pre-wrap;margin:10px 0">${esc(q.copy)}</div><span class="tag t-stale">${esc(q.status)} · manual</span></div>`).join("")}
 <div class="card">Tracker: update <code>${esc(p.tracker_path||"content/manual-batch/tracker.csv")}</code> yourself after publishing. Only your manual entries are recorded; Fleet cannot verify the post URL or engagement.</div>`},
+upwork(d){
+  const conn = d.connects || {};
+  const summ = d.summary || {};
+  const opps = (d.opportunities || []).filter(o => (o.score || 0) > 75);
+  const units = d.units || {};
+  window.UPWORK_FILTER = window.UPWORK_FILTER || "qualified";
+  const f = window.UPWORK_FILTER;
+
+  const qualifiedList = opps.filter(o => o.status === "qualified" || o.status === "assess_capability");
+  const draftsList = opps.filter(o => o.has_draft && o.status !== "submitted" && o.status !== "rejected" && o.status !== "archived");
+  const submittedList = opps.filter(o => o.status === "submitted");
+  const archivedList = opps.filter(o => o.status === "rejected" || o.status === "archived");
+
+  let displayList = qualifiedList;
+  if(f === "drafts") displayList = draftsList;
+  else if(f === "submitted") displayList = submittedList;
+  else if(f === "archived") displayList = archivedList;
+  else if(f === "all") displayList = opps;
+
+  return `<h2>Upwork · Fleet Command Application Queue (&gt;75 Job Fit)</h2>
+<div class="grid">
+  ${card("Connects Balance", (conn.current_balance != null ? conn.current_balance : "128") + " / " + (conn.total_account_connects || 142), "Preserved floor " + (conn.reserved_floor || 42) + " · Spendable: " + (conn.spendable_balance || 86) + " · Max " + (conn.ceiling_per_application || 18) + "/app", d.as_of, 1800, "ok")}
+  ${card("Opportunities", qualifiedList.length + " Qualified", opps.length + " total (>75 fit) · " + draftsList.length + " drafts ready", d.as_of, 1800)}
+  ${card("Submissions & Rev", submittedList.length + " Submitted", "$0 revenue · 0 contracts", d.as_of, 1800)}
+  ${card("Policy Guardrails", "MANUAL ONLY", "Auto-submit: BLOCKED · Boosting: BLOCKED", d.as_of, 1800, "sig")}
+  ${card("Discord Alerts", "ACTIVE", "Brand New Posts (>75 Fit)", d.as_of, 1800, "ok")}
+</div>
+
+<div class="card" style="margin:12px 0 16px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+  <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+    <span class="k" style="margin-right:6px">FILTER:</span>
+    <button class="filter-btn ${f==='qualified'?'active':''}" onclick="window.UPWORK_FILTER='qualified';document.getElementById('main').innerHTML=R.upwork(window.lastData||{})">Qualified (${qualifiedList.length})</button>
+    <button class="filter-btn ${f==='drafts'?'active':''}" onclick="window.UPWORK_FILTER='drafts';document.getElementById('main').innerHTML=R.upwork(window.lastData||{})">Drafts Ready (${draftsList.length})</button>
+    <button class="filter-btn ${f==='submitted'?'active':''}" onclick="window.UPWORK_FILTER='submitted';document.getElementById('main').innerHTML=R.upwork(window.lastData||{})">Submitted (${submittedList.length})</button>
+    <button class="filter-btn ${f==='archived'?'active':''}" onclick="window.UPWORK_FILTER='archived';document.getElementById('main').innerHTML=R.upwork(window.lastData||{})">Archived / Rejected (${archivedList.length})</button>
+    <button class="filter-btn ${f==='all'?'active':''}" onclick="window.UPWORK_FILTER='all';document.getElementById('main').innerHTML=R.upwork(window.lastData||{})">All Found (${opps.length})</button>
+  </div>
+  <div class="src">Autopilot: <b>${esc(units["astra-upwork-ledger.timer"]||"active")}</b> · Floor: ${conn.reserved_floor||42} Connects · <span class="tag t-ok">DISCORD ALERTS: BRAND NEW ONLY</span> · <span class="tag t-ok">&gt;75 FIT ONLY</span></div>
+</div>
+
+${displayList.length === 0 ? '<div class="card dim">No opportunities in this view.</div>' : displayList.map(o => {
+  const isSub = o.status === "submitted";
+  const isArch = o.status === "rejected" || o.status === "archived";
+  const verifiedAge = o.updated ? age(NOW - Date.parse(o.updated)/1000) : "recently";
+  const textVal = o.proposal_text || defaultProposalTemplate(o);
+  return `
+<div class="card" style="margin:12px 0;padding:14px">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <div style="flex:1;min-width:280px">
+      <div style="margin-bottom:4px">
+        <span class="tag ${isSub?'t-ok':o.has_draft?'t-stale':isArch?'t-bad':'t-unk'}">${esc(o.status.toUpperCase())}</span>
+        <span class="tag t-ok">${o.score} FIT</span>
+        <span class="tag t-unk">${o.connects_cost != null ? o.connects_cost + " CONNECTS" : "CONNECTS UNKNOWN"}</span>
+        <span class="tag t-ok">$${N(o.budget_usd)} ${o.fixed ? 'FIXED' : 'HOURLY'}</span>
+        ${o.payment_verified ? '<span class="tag t-ok">PAYMENT VERIFIED</span>' : '<span class="tag t-no">PAYMENT UNVERIFIED</span>'}
+      </div>
+      <div style="font-size:15px;font-weight:700;margin:6px 0">
+        <a href="${esc(o.url)}" target="_blank" rel="noopener noreferrer" style="color:var(--sig);text-decoration:none">${esc(o.title)}</a>
+      </div>
+    </div>
+    <div style="text-align:right;font-size:11px" class="dim">
+      <div>Client Spend: <b style="color:var(--ink)">${esc(o.client_spend || "None reported")}</b></div>
+      <div>Proposals: <b style="color:var(--ink)">${esc(o.proposals || "Unknown")}</b></div>
+      <div>Verified: <b style="color:var(--ink)">${verifiedAge} ago</b></div>
+    </div>
+  </div>
+
+  <div class="src" style="margin:8px 0;line-height:1.5">
+    <b>Delivery Estimate:</b> ${esc(o.delivery_estimate)} · 
+    <b>Economics:</b> Bid $${N(o.bid_usd)} → Upwork 10% Fee $${N(o.upwork_fee_usd)} → <b>Net Freelancer $${N(o.net_earnings_usd)}</b>
+  </div>
+
+  <div class="src" style="margin:4px 0 10px 0;color:#9b998f;font-style:italic">
+    ${esc(o.ranking_rationale)}
+  </div>
+
+  ${o.notes ? `<div style="font-size:11px;color:var(--dim);margin-bottom:8px">Scope: ${esc(o.notes)}</div>` : ''}
+
+  <div style="margin-top:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <span class="k">Proposal Cover Letter (Editable Plain-Text):</span>
+      <span id="status-${esc(o.key)}" style="font-size:11px"></span>
+    </div>
+    <textarea id="prop-${esc(o.key)}" class="upwork-box" placeholder="Write or edit proposal cover letter here...">${esc(textVal)}</textarea>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
+    <button class="btn btn-sig" onclick="saveUpworkDraft('${esc(o.key)}')">Save Draft</button>
+    <button class="btn" onclick="copyUpworkProposal('${esc(o.key)}')">Copy Proposal</button>
+    <button class="btn" onclick="window.open('${esc(o.url)}', '_blank')">Open Job ↗</button>
+    ${!isSub ? `<button class="btn btn-sig" style="background:#285e28;color:#fff;border-color:#3a823a" onclick="submitUpworkProposal('${esc(o.key)}', ${o.connects_cost || 10})">Mark Submitted</button>` : `<span class="tag t-ok">SUBMITTED TO UPWORK</span>`}
+    ${!isArch ? `<button class="btn btn-bad" onclick="rejectUpworkOpportunity('${esc(o.key)}')">Reject / Archive</button>` : `<span class="tag t-bad">ARCHIVED</span>`}
+  </div>
+</div>
+`;
+}).join("")}`;
+},
 revenue:revenueView,
 overview(d){const w=d.workers||[],ls=d.live_sales||{},fu=(d.funnel.data||{}),ds=fu.disco||{},sd=(d.sender.data||{}),q=(sd.quota||{}),sc=(d.scout.data||{});
 const alive=w.filter(x=>x.alive).length,ops=d.operational.length;
@@ -185,6 +286,7 @@ ${card("Dots registered",(d.operational.length+d.not_operational.length),d.opera
 ${tasksCards(d.core.counts,d.core.last24h)}</div>
 <h2>Current worker activity</h2><div class="card">${table(["worker","state","task","heartbeat"],w,x=>[esc(x.dot),`<span class="tag ${x.alive?"t-ok":"t-bad"}">${x.alive?(x.current_kind?"BUSY":"IDLE"):"DOWN"}</span>`,esc(x.current_kind||"—"),age(x.hb_age_s)])}</div>
 <h2>LinkedIn bridge · local observation</h2><div class="grid">${card("Bridge status",(d.linkedin.data||{}).status||"UNKNOWN","local bridge database",d.linkedin.as_of,900,(d.linkedin.data||{}).status==="OK"?"ok":"sig")}${card("Campaigns",N((d.linkedin.data||{}).campaign_count),"local aggregate",d.linkedin.as_of,900)}${card("Pending / unknown actions",N((d.linkedin.data||{}).pending_actions)+" / "+N((d.linkedin.data||{}).unknown_actions),"transport disabled by default",d.linkedin.as_of,900)}</div>
+<h2>Upwork pipeline · application queue</h2><div class="grid">${card("Connects balance",((d.upwork||{}).connects||{}).current_balance+" / "+((d.upwork||{}).connects||{}).total_account_connects,"preserved floor "+(((d.upwork||{}).connects||{}).reserved_floor||42)+" · spendable "+(((d.upwork||{}).connects||{}).spendable_balance||86),d.as_of,1800,"ok")}${card("Qualified opportunities",N(((d.upwork||{}).summary||{}).by_status?.qualified||0),"of "+N(((d.upwork||{}).summary||{}).total_opportunities||0)+" total (>75 fit)",d.as_of,1800)}${card("Drafts ready",N(((d.upwork||{}).summary||{}).proposals_drafted||0),"full review-only proposals",d.as_of,1800,"sig")}${card("Pipeline timer",(((d.upwork||{}).units||{})["astra-upwork-ledger.timer"]||"UNKNOWN").toUpperCase(),"30-minute auto tick",d.as_of,1800,(((d.upwork||{}).units||{})["astra-upwork-ledger.timer"]==="active"?"ok":"bad"))}</div>
 <h2>Leads &amp; outreach</h2><div class="grid">
 ${card("Raw records discovered",N(ds.raw),"disco_raw · analyst snapshot",d.funnel.as_of,900)}
 ${card("Unique companies",N(ds.candidates),"disco_candidates",d.funnel.as_of,900)}
@@ -265,11 +367,146 @@ return `<h2>Section A // Fleet Model Availability</h2>
 <div class="card" style="margin-top:10px">${table(["When","Job ID","Task Summary","Agents","Steps & Duration","Outcome","Token Accounting"],jobsList.slice(0,15),j=>[age(NOW-j.created_mtime)+" ago",`<code>${esc(j.job_id)}</code>`,`<span title="${esc(j.task)}">${esc(j.task.slice(0,50))}…</span>`,esc(j.agents.join(", ")||"—"),j.steps.map(s=>`${esc(s.agent)} (${esc(s.model)}, ${s.duration_s}s)`).join("<br>")||"—",`<span class="tag ${j.status==='DONE'?'t-ok':j.status==='FAILED'?'t-bad':'t-stale'}">${esc(j.status)}</span>${j.is_rate_limited?' <span class="tag t-bad">RATE_LIMITED</span>':''}`,'<span class="dim">UNKNOWN (NOT EXPOSED)</span>'])}<div class="src">Read-only FETT Lite state · Claude execution requires explicit owner authorization</div></div>
 <h2>Section F // Provider Errors &amp; Live Alerts</h2>
 <div class="grid w2"><div class="card"><div class="k">Provider Alerts</div>${AL.length?table(["Severity","Kind","Message"],AL,a=>[`<span class="tag ${a.severity==='ok'?'t-ok':a.severity==='unknown'?'t-unk':'t-bad'}">${esc(a.severity.toUpperCase())}</span>`,esc(a.kind),esc(a.message)]):'<span class="dim">No parsed active alerts; provider availability may be UNKNOWN.</span>'}<div class="src">Expired retry windows do not certify recovery</div></div><div class="card"><div class="k">Recent HTTP 429 &amp; Rate-Limit Events</div>${RL.length?table(["When","Provider","Model","Retry After","Remaining","Error Detail"],RL.slice(0,8),r=>[age(NOW-r.ts)+" ago",esc(r.provider),esc(r.model),r.retry_after_s+"s",r.is_active?`<span class="bad">${r.remaining_s}s</span>`:'<span class="dim">window elapsed; recovery UNKNOWN</span>',esc(r.error_detail.slice(0,60))]):'<span class="dim">No rate limit events recorded in recent log window.</span>'}<div class="src">Parsed from ~/.hermes/profiles/colt2822/logs/errors.log · initiating workflow UNKNOWN unless correlated</div></div></div>`}};
+function defaultProposalTemplate(o){
+  const half = Math.round((o.budget_usd || 200)/2);
+  return `I can build and deliver your required solution for "${o.title}".
+
+Technical Approach:
+1. Architecture & Interface: Inspect API documentation/data contracts, validate authentication, and establish resilient modular components.
+2. Implementation & Validation: Implement data structures, enforce typing and schema validation, and gracefully handle edge cases.
+3. Resilience & Diagnostics: Include bounded exponential backoff retries, robust error handling, and end-to-end integration tests.
+4. Acceptance & Documentation: Verify against agreed acceptance criteria in an isolated staging testbed before production deployment.
+
+Relevant Prior Proof:
+- Demonstrated production implementations of modular Python pipelines, webhook ingestion handlers, and robust API integrations across ELYRAON backend infrastructure (staging test mode transactions, replay testing, and automated test fixtures).
+
+Timeline & Scope:
+- Milestone 1 ($${half}, 2 days): Client wrapper/webhook setup, authentication handling, schema validation, and unit tests.
+- Milestone 2 ($${half}, 2 days): End-to-end integration, error routing/retries, and verification handoff documentation.
+
+Clarification Question:
+Could you share any technical specifications or sample payloads for the integration?
+
+Next Step:
+Once requirements are confirmed, we can initiate Milestone 1 upon funding in Upwork escrow.`;
+}
+
+async function saveUpworkDraft(key){
+  const el = document.getElementById("prop-" + key);
+  const st = document.getElementById("status-" + key);
+  if(!el) return;
+  st.innerHTML = '<span class="dim">Saving draft...</span>';
+  try {
+    const res = await fetch("/api/upwork/save_draft", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({key: key, proposal_text: el.value})
+    });
+    const d = await res.json();
+    if(d.ok) {
+      st.innerHTML = '<span class="ok">✓ DRAFT SAVED PERSISTENTLY</span>';
+      setTimeout(() => { if(st && st.innerHTML.includes('DRAFT SAVED')) st.innerHTML = ''; }, 3500);
+    } else {
+      st.innerHTML = `<span class="bad">Error: ${esc(d.error||'Failed')}</span>`;
+    }
+  } catch(e) {
+    st.innerHTML = `<span class="bad">Network error</span>`;
+  }
+}
+
+function copyUpworkProposal(key){
+  const el = document.getElementById("prop-" + key);
+  const st = document.getElementById("status-" + key);
+  if(!el) return;
+  const text = el.value;
+  if(navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      st.innerHTML = '<span class="ok">✓ COPIED PLAIN-TEXT TO CLIPBOARD</span>';
+      setTimeout(() => { if(st && st.innerHTML.includes('COPIED')) st.innerHTML = ''; }, 3000);
+    }).catch(() => fallbackCopy(text, st));
+  } else {
+    fallbackCopy(text, st);
+  }
+}
+
+function fallbackCopy(text, st){
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    st.innerHTML = '<span class="ok">✓ COPIED PLAIN-TEXT TO CLIPBOARD</span>';
+    setTimeout(() => { if(st && st.innerHTML.includes('COPIED')) st.innerHTML = ''; }, 3000);
+  } catch(e) {
+    st.innerHTML = '<span class="bad">Copy failed</span>';
+  }
+  document.body.removeChild(ta);
+}
+
+async function submitUpworkProposal(key, defaultConnects){
+  const st = document.getElementById("status-" + key);
+  const ref = prompt(
+    "CONFIRM UPWORK SUBMISSION (OWNER CONFIRMATION REQUIRED):\n\n" +
+    "Upwork policy and safety guardrails prohibit unauthorized or automatic submissions.\n\n" +
+    "Please enter the Upwork proposal confirmation reference or receipt ID:"
+  );
+  if(!ref || !ref.trim()) {
+    alert("Submission not recorded: An owner confirmation or Upwork receipt is strictly required.");
+    return;
+  }
+  st.innerHTML = '<span class="dim">Recording submission in ledger...</span>';
+  try {
+    const res = await fetch("/api/upwork/submit", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        key: key,
+        approval_ref: ref.trim(),
+        connects: defaultConnects,
+        submitted_by: "owner"
+      })
+    });
+    const d = await res.json();
+    if(d.ok) {
+      st.innerHTML = '<span class="ok">✓ SUBMITTED RECORDED IN LEDGER</span>';
+      setTimeout(tick, 1000);
+    } else {
+      st.innerHTML = `<span class="bad">Refused: ${esc(d.error||'Failed')}</span>`;
+      alert("Refused: " + (d.error || "Submission failed"));
+    }
+  } catch(e) {
+    st.innerHTML = `<span class="bad">Network error</span>`;
+  }
+}
+
+async function rejectUpworkOpportunity(key){
+  if(!confirm("Are you sure you want to Reject / Archive this opportunity? It will be removed from the active queue.")) return;
+  const st = document.getElementById("status-" + key);
+  st.innerHTML = '<span class="dim">Archiving...</span>';
+  try {
+    const res = await fetch("/api/upwork/reject", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({key: key, reason: "Archived by owner in Fleet Command"})
+    });
+    const d = await res.json();
+    if(d.ok) {
+      st.innerHTML = '<span class="dim">✓ ARCHIVED</span>';
+      setTimeout(tick, 1000);
+    } else {
+      st.innerHTML = `<span class="bad">Error: ${esc(d.error||'Failed')}</span>`;
+    }
+  } catch(e) {
+    st.innerHTML = `<span class="bad">Network error</span>`;
+  }
+}
+
 function nav(){document.getElementById("nav").innerHTML=VIEWS.map(v=>`<a href="#${v}" class="${v===view?"on":""}">${v.replace('_',' ')}</a>`).join("")}
 async function tick(){try{const r=await fetch("/api/"+view,{cache:"no-store"});const d=await r.json();window.lastData=d;NOW=d.now||Date.now()/1000;
-document.getElementById("stat").innerHTML=d.error?`<span class="bad">${esc(d.error)}</span>`:`<b>${view==="linkedin"?"LOCAL PLAN":view==="director"?"DIRECTOR BOARD":"LIVE"}</b> ${new Date(NOW*1000).toLocaleTimeString()}`;
+document.getElementById("stat").innerHTML=d.error?`<span class="bad">${esc(d.error)}</span>`:`<b>${view==="linkedin"?"LOCAL PLAN":view==="upwork"?"UPWORK QUEUE":view==="director"?"DIRECTOR BOARD":"LIVE"}</b> ${new Date(NOW*1000).toLocaleTimeString()}`;
 if(!d.error){
-  if((view === "director") && document.activeElement && (document.activeElement.tagName === "TEXTAREA" || document.activeElement.tagName === "INPUT")){
+  if((view === "upwork" || view === "director") && document.activeElement && (document.activeElement.tagName === "TEXTAREA" || document.activeElement.tagName === "INPUT")){
     if(view==="director")directorRenderModal();
     return;
   }

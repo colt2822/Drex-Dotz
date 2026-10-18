@@ -1,4 +1,4 @@
-"""DREX FLEET COMMAND: dashboard. Read-only except the Director owner actions; bound to 127.0.0.1, real data only.
+"""DREX FLEET COMMAND: dashboard. Read-only except the Upwork and Director owner actions; bound to 127.0.0.1, real data only.
 
 Every figure carries its source and timestamp; the UI marks it STALE past `stale_after_s` and UNKNOWN when no
 real source exists. Nothing here writes to the CRM, the fleet queue or any service.
@@ -104,10 +104,12 @@ def build(view: str) -> dict:
             ls = live_sales(now)
             fu = funnel["data"] or {}
             ds = fu.get("disco", {})
+            from dotz.fleet.upwork import get_upwork_snapshot
+            upwork_snap = get_upwork_snapshot(now)
             out |= {"workers": core["workers"], "live_sales": ls, "funnel": funnel, "scout": scout, "sender": sender,
                     "cost": model_cost(), "operational": [d["name"] for d in core["dots"] if d["operational"]],
                     "not_operational": [d["name"] for d in core["dots"] if not d["operational"]],
-                    "linkedin": linkedin, "revenue": snap(f, "revenue"), "research": snap(f, "research"), "growth": snap(f, "growth"),
+                    "linkedin": linkedin, "upwork": upwork_snap, "revenue": snap(f, "revenue"), "research": snap(f, "research"), "growth": snap(f, "growth"),
                     "director": snap(f, "director"), "support": snap(f, "triage"),
                     "unknown": {"verified_sales": "no source wired", "revenue_usd": "no source wired",
                                 "meetings": "no source wired", "conversions": "no source wired", "luna_subscription_cost": "usage not metered"},
@@ -143,6 +145,9 @@ def build(view: str) -> dict:
                 out["linkedin_schedule"] = {"status": "UNKNOWN", "reason": type(e).__name__,
                                              "source": str(schedule_path), "reporting_mode": "MANUAL_REPORTS_ONLY"}
             out["linkedin"] = snap(f, "linkedin")
+        elif view == "upwork":
+            from dotz.fleet.upwork import get_upwork_snapshot
+            out |= get_upwork_snapshot(now)
         elif view == "revenue":
             rv = snap(f, "revenue")
             last = f.execute("SELECT outcome,detail,at FROM fleet_attempts WHERE kind='commerce.revenue_observe' ORDER BY seq DESC LIMIT 1").fetchone()
@@ -224,6 +229,28 @@ class H(BaseHTTPRequestHandler):
         path = self.path.split("?")[0]
         if path.startswith("/api/director/"):
             return self._director_post(path)
+        if path.startswith("/api/upwork/"):
+            try:
+                length = int(self.headers.get("Content-Length") or 0)
+                body = self.rfile.read(length) if length > 0 else b"{}"
+                payload = json.loads(body.decode("utf-8") or "{}")
+            except Exception as e:
+                return self._send(400, json.dumps({"error": f"Invalid JSON payload: {str(e)}"}).encode())
+
+            from dotz.fleet.upwork import save_draft_action, mark_submitted_action, reject_opportunity_action
+            if path == "/api/upwork/save_draft":
+                res = save_draft_action(payload)
+                return self._send(200 if res.get("ok") else 400, json.dumps(res).encode())
+            elif path == "/api/upwork/submit":
+                res = mark_submitted_action(payload)
+                return self._send(200 if res.get("ok") else 400, json.dumps(res).encode())
+            elif path == "/api/upwork/reject":
+                res = reject_opportunity_action(payload)
+                return self._send(200 if res.get("ok") else 400, json.dumps(res).encode())
+            elif path == "/api/upwork/archive":
+                res = reject_opportunity_action({**payload, "archive": True})
+                return self._send(200 if res.get("ok") else 400, json.dumps(res).encode())
+            return self._send(404, b'{"error":"unknown upwork action"}')
         self._deny()
 
     def _director_post(self, path):
