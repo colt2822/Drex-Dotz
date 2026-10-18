@@ -112,6 +112,26 @@ class Supervisor:
                 last_prune = time.time()
             self.stop.wait(BEAT_S / 2)
 
+    def hunter_loop(self) -> None:
+        """PR hunter: advance the active contribution job one stage (or claim the next issue), paced by next_delay.
+        Replaces the hourly systemd timer; external writes stay gated by auto_external_submission."""
+        from dotz.fleet import hunter_pipeline
+        from dotz.fleet.contributions import HunterConfig
+        self.stop.wait(30)
+        while not self.stop.is_set():
+            delay = 3600.0
+            try:
+                config = HunterConfig.load()
+                if config.enabled:
+                    result = hunter_pipeline.tick(config)
+                    delay = hunter_pipeline.next_delay(result)
+                    if result.get("status") != "IDLE" or result.get("claim"):
+                        print(f"hunter: {json.dumps(result, default=str)[:300]}", flush=True)
+            except Exception:
+                traceback.print_exc()
+                delay = hunter_pipeline.next_delay({}, errored=True)
+            self.stop.wait(delay)
+
     def start(self) -> None:
         # stale workers of a previous process incarnation are not alive: mark them
         with self.db.lock:
@@ -119,6 +139,8 @@ class Supervisor:
         ops = [d["name"] for d in DOTS if d["operational"]]
         self.threads = [threading.Thread(target=self.worker, args=(n,), daemon=True, name=f"w-{n}") for n in ops]
         self.threads.append(threading.Thread(target=self.beat_loop, daemon=True, name="beat"))
+        if os.environ.get("FETT_HUNTER_THREAD", "1") != "0":
+            self.threads.append(threading.Thread(target=self.hunter_loop, daemon=True, name="hunter"))
         for t in self.threads:
             t.start()
 

@@ -239,3 +239,10 @@ def test_tick_survives_discovery_failure(tmp_path):
             raise RuntimeError("GitHub discovery failed: HTTPError")
     r = H.tick(CFG, tmp_path / "f.db", FakeGH(), runner_ok, client=Boom())
     assert r["claim"]["status"] == "DISCOVERY_ERROR"
+
+
+def test_next_delay():
+    assert H.next_delay({"status": "RUNNING"}) == 120
+    assert H.next_delay({"status": "IDLE"}) == 3600
+    assert H.next_delay({"status": "IDLE", "claim": {"status": "DISCOVERY_ERROR"}}) == 900
+    assert H.next_delay({}, errored=True) == 900

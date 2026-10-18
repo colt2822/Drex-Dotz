@@ -466,3 +466,14 @@ def plan(job_id: str, db_path=DB_PATH) -> dict:
         c.close()
     return {"job_id": job_id, "status": job["status"], "stage": job["ev"].get("stage"), "hold_reasons": job["ev"].get("hold_reasons"),
             "review": job["ev"].get("review"), "plan": job["ev"].get("plan")}
+
+
+def next_delay(result: dict, errored: bool = False) -> float:
+    """Seconds before the fleet's hunter thread ticks again: fast while a job is moving, slow when idle or rate limited."""
+    if errored or (result.get("claim") or {}).get("status") == "DISCOVERY_ERROR":
+        return 900.0
+    if result.get("status") == "IDLE":
+        return 3600.0
+    if result.get("status") in ("SUBMITTED", "REJECTED"):
+        return 300.0
+    return 120.0
