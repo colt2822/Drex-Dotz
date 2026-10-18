@@ -58,6 +58,20 @@ def cmd_hunter_status(a):
         c.close()
 
 
+def cmd_hunter_advance(a):
+    from dotz.fleet import hunter_pipeline
+    from dotz.fleet.contributions import HunterConfig
+    from dotz.fleet.db import DB_PATH
+    config = HunterConfig.load(a.config) if a.config else HunterConfig.load()
+    print(json.dumps(hunter_pipeline.tick(config, a.db or DB_PATH), indent=1, default=str))
+
+
+def cmd_hunter_plan(a):
+    from dotz.fleet import hunter_pipeline
+    from dotz.fleet.db import DB_PATH
+    print(json.dumps(hunter_pipeline.plan(a.job, a.db or DB_PATH), indent=1, default=str))
+
+
 def main():
     ap = argparse.ArgumentParser(prog="dotz.fleet")
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -68,6 +82,8 @@ def main():
     x = sp.add_parser("enqueue"); x.add_argument("dot"); x.add_argument("kind"); x.add_argument("--payload", default="{}"); x.add_argument("--idem"); x.set_defaults(f=cmd_enqueue)
     x = sp.add_parser("hunter-run"); x.add_argument("--config"); x.add_argument("--db", type=Path); x.add_argument("--api", default="https://api.github.com"); x.set_defaults(f=cmd_hunter_run)
     x = sp.add_parser("hunter-status"); x.add_argument("--config"); x.add_argument("--db", type=Path); x.set_defaults(f=cmd_hunter_status)
+    x = sp.add_parser("hunter-advance"); x.add_argument("--config"); x.add_argument("--db", type=Path); x.set_defaults(f=cmd_hunter_advance)
+    x = sp.add_parser("hunter-plan"); x.add_argument("job"); x.add_argument("--db", type=Path); x.set_defaults(f=cmd_hunter_plan)
     a = ap.parse_args()
     a.f(a)
 

@@ -1,8 +1,9 @@
 """Bounded GitHub contribution pipeline for the existing fleet state store.
 
-This module prepares one maintainer-reviewable fix job at a time.  It never
-pushes branches, opens pull requests, or sends messages; those are explicit
-owner-release actions outside this pipeline.
+This module discovers and claims one maintainer-reviewable fix job at a time.
+It never pushes branches, opens pull requests, or sends messages itself; the
+later stages live in hunter_pipeline and external writes there are gated by
+auto_external_submission.
 """
 from __future__ import annotations
 
@@ -143,6 +144,14 @@ def _db(path: Path | str = DB_PATH) -> sqlite3.Connection:
     return c
 
 
+BOUNTY_LABELS = {"bounty", "💎 bounty", "algora", "bounty:"}
+
+
+def is_bounty(item: dict) -> bool:
+    labels = {str(x.get("name", "")).lower() for x in item.get("labels", [])}
+    return bool(labels & BOUNTY_LABELS) or any(x.startswith("$") and x[1:].isdigit() for x in labels)
+
+
 def _query_text(item: dict) -> str:
     return " ".join(str(item.get(k, "")) for k in ("title", "body", "comments_url")).lower()
 
@@ -170,7 +179,7 @@ def eligible_issue(item: dict, minimum: float = 75) -> bool:
     if labels.intersection({"duplicate", "spam", "wontfix", "fixed", "resolved"}):
         return False
     # Quality floor: a maintainer-acknowledged bug of fixable size, not a campaign or feature wish-list.
-    if not labels.intersection({"bug", "good first issue", "help wanted", "confirmed", "regression"}):
+    if not labels.intersection({"bug", "good first issue", "help wanted", "confirmed", "regression"} | BOUNTY_LABELS):
         return False
     body = item.get("body") or ""
     if not 80 <= len(body) <= 6000 or (item.get("comments") or 0) > 20 or item.get("assignee") or item.get("assignees"):
@@ -215,7 +224,15 @@ def discover(client: GitHubClient, config: HunterConfig | None = None) -> list[d
         query = f"is:issue is:open label:bug language:{lang} comments:<=20 no:assignee -label:duplicate"
         for item in client.search_issues(query, max(1, config.candidates_per_run // 2)):
             items.setdefault(item.get("html_url", ""), item)
-    ranked = sorted((i for i in items.values() if eligible_issue(i, 0)), key=score_issue, reverse=True)
+        # Bounty lane: same quality floor (stars, size, unassigned, no campaign titles), found by bounty labels.
+        for label in ("bounty", '"💎 Bounty"'):
+            query = f"is:issue is:open label:{label} language:{lang} comments:<=10 no:assignee -label:duplicate"
+            try:
+                for item in client.search_issues(query, 10):
+                    items.setdefault(item.get("html_url", ""), item)
+            except RuntimeError:
+                continue
+    ranked = sorted((i for i in items.values() if eligible_issue(i, 0)), key=lambda i: (is_bounty(i), score_issue(i)), reverse=True)
     # Star counts need one repo call each (60/h unauthenticated): enrich only the leading handful.
     out = []
     for item in ranked[:10]:
@@ -226,7 +243,7 @@ def discover(client: GitHubClient, config: HunterConfig | None = None) -> list[d
         item["repository"] = {k: repo.get(k) for k in ("full_name", "stargazers_count", "archived", "pushed_at")}
         if eligible_issue(item, config.min_issue_score):
             out.append(item)
-    return sorted(out, key=score_issue, reverse=True)
+    return sorted(out, key=lambda i: (is_bounty(i), score_issue(i)), reverse=True)
 
 
 def run_once(client: GitHubClient, config: HunterConfig | None = None, db_path: Path | str = DB_PATH,
@@ -240,7 +257,9 @@ def run_once(client: GitHubClient, config: HunterConfig | None = None, db_path: 
         day = datetime.fromtimestamp(now, timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
         tomorrow = day + 86400
         active = c.execute("SELECT count(*) FROM contribution_jobs WHERE status IN ('QUEUED','RUNNING','VERIFYING','DRAFT')").fetchone()[0]
-        made = c.execute("SELECT count(*) FROM contribution_jobs WHERE created_at>=? AND created_at<?", (day, tomorrow)).fetchone()[0]
+        # A job rejected at preflight cost nothing (no work, no external write), so it does not use up the day's quota.
+        made = c.execute("SELECT count(*) FROM contribution_jobs WHERE created_at>=? AND created_at<? "
+                         "AND NOT (status='REJECTED' AND evidence LIKE '%\"gate\": \"preflight\"%')", (day, tomorrow)).fetchone()[0]
         if active >= config.max_concurrent_fixes or made >= config.fix_jobs_per_day:
             return None
         candidates = discover(client, config)
