@@ -164,7 +164,18 @@ def score_issue(item: dict) -> float:
     relevance = 20 if any(x in text for x in ("agent", "automation", "mcp", "developer", "python", "typescript")) else 0
     visibility = 15 if (item.get("repository", {}).get("stargazers_count", 0) or 0) >= 100 else 0
     effort = 10 if any(x in text for x in ("small", "simple", "typo", "regression", "fix")) else 0
-    return float(reproducibility + acceptance + relevance + visibility + effort)
+    fallback = float(reproducibility + acceptance + relevance + visibility + effort)
+    try:
+        from dotz.fleet.model_usage import drex_decide
+        decision = drex_decide(
+            f"Classify this GitHub issue for the fleet hunter: {text[:3000]}",
+            choices=["QUALIFY", "REJECT"],
+        )
+        if decision:
+            return 100.0 if str(decision["answer"]).upper() == "QUALIFY" else 0.0
+    except Exception:
+        pass
+    return fallback
 
 
 def eligible_issue(item: dict, minimum: float = 75) -> bool:

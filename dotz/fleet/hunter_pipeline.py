@@ -28,6 +28,20 @@ from pathlib import Path
 from dotz.fleet import contributions as C
 from dotz.fleet.db import DB_PATH
 
+
+def classify_hunter_issue(text: str, fallback: str = "REJECT") -> str:
+    """Classify an issue through Drex before the hunter uses paid work.
+
+    Unknown, low-confidence, timeout, and ESCALATE results deliberately use
+    the caller's existing classification.
+    """
+    try:
+        from dotz.fleet.model_usage import drex_decide
+        result = drex_decide(f"Classify this hunter issue: {text[:3000]}", choices=["QUALIFY", "REJECT"])
+        return str(result["answer"]).upper() if result else fallback
+    except Exception:
+        return fallback
+
 REPOS_DIR = Path(os.environ.get("FETT_HUNTER_REPOS", Path.home() / "hunter-repos"))
 NOVA_DB = Path(os.environ.get("NOVA_DB_PATH", Path.home() / "nova" / "orchestrator" / "nova.db"))
 HERMES = os.environ.get("FETT_HERMES_BIN", "hermes")

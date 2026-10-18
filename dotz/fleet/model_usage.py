@@ -12,7 +12,10 @@ import json
 import os
 import re
 import sqlite3
+import threading
 import time
+import urllib.error
+import urllib.request
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -58,6 +61,41 @@ FETT_AGENT_MODELS = {
     "grok": {"model": "grok-4.7", "provider": "xai", "role": "X_RESEARCH_AND_CONTENT"},
     "agy": {"model": "gemini-3.8-flash", "provider": "google", "role": "RESEARCH_ISOLATED"},
 }
+
+DREX_URL = os.environ.get("FETT_DREX_URL", "http://127.0.0.1:8090")
+_drex_lock = threading.Lock()
+_drex_stats = {"calls": 0, "answered": 0, "paid_calls_avoided": 0}
+
+
+def drex_decide(prompt: str, *, choices: list[str] | None = None, timeout: float = 2.0) -> dict | None:
+    """Return a confident local decision, or None to preserve old behavior."""
+    if not choices:
+        return None
+    endpoint = "/v1/decide/choose"
+    body = {"question": str(prompt)[:1000], "choices": list(choices), "context": str(prompt)[:4000]}
+    with _drex_lock:
+        _drex_stats["calls"] += 1
+    req = urllib.request.Request(
+        DREX_URL.rstrip("/") + endpoint, data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json", "Accept": "application/json"}, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            data = json.loads(response.read() or b"{}")
+        confidence = float(data.get("confidence", 0))
+        answer = data.get("selected")
+        if data.get("disposition") != "ACCEPT" or confidence < 0.5 or not answer:
+            return None
+        with _drex_lock:
+            _drex_stats["answered"] += 1
+            _drex_stats["paid_calls_avoided"] += 1
+        return {"answer": str(answer).upper(), "confidence": confidence}
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError, ValueError, TypeError):
+        return None
+
+
+def drex_usage() -> dict:
+    with _drex_lock:
+        return dict(_drex_stats)
 
 
 def _ro_sqlite(path: Path) -> sqlite3.Connection | None:
@@ -1219,10 +1257,13 @@ def get_model_usage_snapshot(env: ModelUsageEnv | None = None, now: float | None
         },
         "fett_lite": fett_jobs,
         "analytics": analytics,
+        "drex_decisions": drex_usage(),
         "alerts": alerts,
         "spending": {
             "fleet_model_usd": fleet_dot_usd if fleet_cost_known else None,
             "fleet_model_calls": fleet_calls if fleet_cost_known else None,
+            "drex_calls": drex_usage()["calls"],
+            "paid_calls_avoided": drex_usage()["paid_calls_avoided"],
             "nous_spend_usd": 0.0,
             "subscription_notes": "Codex Plus, Claude, SuperGrok are monthly/weekly subscription tiers. Measured API cost reflects direct token billing.",
         },

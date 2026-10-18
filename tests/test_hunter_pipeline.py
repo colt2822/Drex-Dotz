@@ -7,6 +7,7 @@ import pytest
 
 from dotz.fleet import contributions as C
 from dotz.fleet import hunter_pipeline as H
+from dotz.fleet import model_usage as MU
 
 CFG = C.HunterConfig(auto_external_submission=False)
 DIFF = b"diff --git a/pkg/a.py b/pkg/a.py\n--- a/pkg/a.py\n+++ b/pkg/a.py\n@@ -1 +1 @@\n-x = 1\n+x = 2\ndiff --git a/tests/test_a.py b/tests/test_a.py\n--- a/tests/test_a.py\n+++ b/tests/test_a.py\n@@ -0,0 +1 @@\n+assert True\n"
@@ -77,6 +78,23 @@ def test_preflight_rejects_rival_pr_and_costs_no_quota(tmp_path):
     c = C._db(db)
     made = c.execute("SELECT count(*) FROM contribution_jobs WHERE created_at<2 AND NOT (status='REJECTED' AND evidence LIKE '%\"gate\": \"preflight\"%')").fetchone()[0]
     assert made == 0
+
+
+def test_drex_answer_is_used(monkeypatch):
+    monkeypatch.setattr(MU, "drex_decide", lambda *a, **k: {"answer": "QUALIFY", "confidence": 0.5})
+    assert H.classify_hunter_issue("clear reproduction", "REJECT") == "QUALIFY"
+
+
+def test_drex_low_confidence_falls_back(monkeypatch):
+    monkeypatch.setattr(MU, "drex_decide", lambda *a, **k: None)
+    assert H.classify_hunter_issue("unclear", "QUALIFY") == "QUALIFY"
+
+
+def test_drex_timeout_falls_back(monkeypatch):
+    def timeout(*args, **kwargs):
+        raise TimeoutError()
+    monkeypatch.setattr(MU.urllib.request, "urlopen", timeout)
+    assert MU.drex_decide("slow", choices=["QUALIFY", "REJECT"]) is None
 
 
 @pytest.mark.parametrize("files,kw,why", [
