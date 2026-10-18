@@ -11,11 +11,15 @@ class Client:
     def search_issues(self, query, limit):
         return self.items
 
+    def get(self, path):
+        return {"full_name": "acme/tool", "stargazers_count": 500, "archived": False}
+
 
 def issue(url="https://github.com/acme/tool/issues/1", title="Fix reproducible MCP agent regression", number=1):
     return {"html_url": url, "repository_url": "https://api.github.com/repos/acme/tool", "number": number,
-            "title": title, "body": "Steps to reproduce. Maintainer confirmed bug; expected behavior is documented.",
-            "state": "open", "repository": {"full_name": "acme/tool", "stargazers_count": 500}}
+            "title": title, "body": "Steps to reproduce. Maintainer confirmed bug; expected behavior is documented in the README.",
+            "state": "open", "repository": {"full_name": "acme/tool", "stargazers_count": 500},
+            "labels": [{"name": "bug"}], "comments": 2, "user": {"type": "User"}}
 
 
 def test_score_and_filters():
@@ -23,6 +27,15 @@ def test_score_and_filters():
     assert eligible_issue(issue())
     assert not eligible_issue(issue(title="crypto airdrop"))
     assert not eligible_issue({**issue(), "pull_request": {"url": "x"}})
+
+
+def test_quality_floor_rejects_campaigns_features_and_crowded_threads():
+    assert not eligible_issue({**issue(), "labels": [{"name": "enhancement"}]})
+    assert not eligible_issue(issue(title="MASTER EXECUTION REQUEST - Complete Compatibility Campaign"))
+    assert not eligible_issue({**issue(), "comments": 62})
+    assert not eligible_issue({**issue(), "body": "short"})
+    assert not eligible_issue({**issue(), "assignee": {"login": "someone"}})
+    assert not eligible_issue({**issue(), "repository": {"stargazers_count": 3}})
 
 
 def test_run_once_is_daily_and_draft_only(tmp_path):

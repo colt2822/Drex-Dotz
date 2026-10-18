@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import tempfile
 import time
@@ -168,6 +169,19 @@ def eligible_issue(item: dict, minimum: float = 75) -> bool:
     labels = {str(x.get("name", "")).lower() for x in item.get("labels", [])}
     if labels.intersection({"duplicate", "spam", "wontfix", "fixed", "resolved"}):
         return False
+    # Quality floor: a maintainer-acknowledged bug of fixable size, not a campaign or feature wish-list.
+    if not labels.intersection({"bug", "good first issue", "help wanted", "confirmed", "regression"}):
+        return False
+    body = item.get("body") or ""
+    if not 80 <= len(body) <= 6000 or (item.get("comments") or 0) > 20 or item.get("assignee") or item.get("assignees"):
+        return False
+    if re.search(r"\b(master|campaign|roadmap|epic|tracking|umbrella|execution request|megathread)\b", item.get("title", ""), re.I):
+        return False
+    if (item.get("user") or {}).get("type") == "Bot":
+        return False
+    stars = (item.get("repository") or {}).get("stargazers_count")
+    if stars is not None and stars < 100:
+        return False
     if any(x in text for x in ("giveaway", "seo", "paid promotion", "crypto airdrop", "already fixed")):
         return False
     return score_issue(item) >= minimum
@@ -196,10 +210,23 @@ class GitHubClient:
 
 def discover(client: GitHubClient, config: HunterConfig | None = None) -> list[dict]:
     config = config or HunterConfig.from_env()
-    query = "is:issue is:open stars:>=100 -label:duplicate -label:spam (agent OR automation OR MCP OR developer OR Python OR TypeScript)"
-    items = client.search_issues(query, config.candidates_per_run)
-    return sorted((i for i in items if eligible_issue(i, config.min_issue_score)),
-                  key=score_issue, reverse=True)
+    items: dict[str, dict] = {}
+    for lang in ("python", "typescript"):
+        query = f"is:issue is:open label:bug language:{lang} comments:<=20 no:assignee -label:duplicate"
+        for item in client.search_issues(query, max(1, config.candidates_per_run // 2)):
+            items.setdefault(item.get("html_url", ""), item)
+    ranked = sorted((i for i in items.values() if eligible_issue(i, 0)), key=score_issue, reverse=True)
+    # Star counts need one repo call each (60/h unauthenticated): enrich only the leading handful.
+    out = []
+    for item in ranked[:10]:
+        try:
+            repo = client.get("/repos/" + item["repository_url"].split("/repos/", 1)[-1])
+        except (RuntimeError, KeyError):
+            continue
+        item["repository"] = {k: repo.get(k) for k in ("full_name", "stargazers_count", "archived", "pushed_at")}
+        if eligible_issue(item, config.min_issue_score):
+            out.append(item)
+    return sorted(out, key=score_issue, reverse=True)
 
 
 def run_once(client: GitHubClient, config: HunterConfig | None = None, db_path: Path | str = DB_PATH,
