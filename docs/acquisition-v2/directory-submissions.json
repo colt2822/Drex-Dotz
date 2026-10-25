@@ -1,0 +1,38 @@
+[
+  {
+    "service": "workflow",
+    "title": "ELYREON n8n Workflow Rescue",
+    "description": "Static n8n workflow validator: workflow errors and repair suggestions. No execution.",
+    "mcp_url": "https://elyraon.com.co/agents/mcp",
+    "homepage": "https://elyraon.com.co/agents/",
+    "source_repository": "https://github.com/colt2822/Drex-Dotz",
+    "source_branch": "agent-acquisition-v2",
+    "category": "Developer Tools / validation",
+    "transport": "streamable-http",
+    "authentication": "Free trial bearer token; not OAuth",
+    "payments_enabled": false,
+    "review_required": true,
+    "smithery_blocker": "OAuth required for authenticated URL publication; existing trial bearer flow incompatible",
+    "glama_blocker": "Authenticated account and connector curation required",
+    "n8n_template": "https://elyraon.com.co/agents/integrations/n8n-workflow.json",
+    "use_case": "Validate sanitized n8n export before import"
+  },
+  {
+    "service": "payload",
+    "title": "ELYREON JSON Schema Payload Validator",
+    "description": "JSON Schema validator for API payloads via MCP: bounded checks and structured pass/fail errors.",
+    "mcp_url": "https://elyreon-payload-validator.colt2822.workers.dev/mcp",
+    "homepage": "https://elyraon.com.co/agents/",
+    "source_repository": "https://github.com/colt2822/Drex-Decision-Gateway-for-Coding-Agents",
+    "source_branch": "payload-acquisition-v2",
+    "category": "Developer Tools / validation",
+    "transport": "streamable-http",
+    "authentication": "Free trial bearer token; not OAuth",
+    "payments_enabled": false,
+    "review_required": true,
+    "smithery_blocker": "OAuth required for authenticated URL publication; existing trial bearer flow incompatible",
+    "glama_blocker": "Authenticated account and connector curation required",
+    "n8n_template": "https://elyraon.com.co/agents/integrations/n8n-payload.json",
+    "use_case": "Validate sanitized generated JSON before API call"
+  }
+]

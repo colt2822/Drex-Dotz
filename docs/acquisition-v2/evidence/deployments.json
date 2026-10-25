@@ -1,0 +1,12 @@
+{
+  "workflow": {
+    "version_id": "821f105f-d384-454f-afad-0406ed983fba",
+    "script": "elyreon-phoenix-agent-commerce",
+    "paid_enabled": false
+  },
+  "payload": {
+    "version_id": "7f5aca0c-3d20-4eee-a3fa-3ef8cde9ff91",
+    "script": "elyreon-payload-validator",
+    "paid_enabled": false
+  }
+}

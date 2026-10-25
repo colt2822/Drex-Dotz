@@ -1,0 +1,19 @@
+{
+  "files": [
+    {
+      "runtime_path": "/home/colton-mcclain/drex-dotz/dotz/phoenix/commerce/cycle.py",
+      "sha256": "681d540936629ff80eae42884b79cec9c4f4e3216a470949ae7190bb8a38b97f"
+    },
+    {
+      "runtime_path": "/home/colton-mcclain/drex-dotz/dotz/phoenix/commerce/acquisition.py",
+      "sha256": "33b24c32493fb47466d8ca2d78647a200ea44e4ea38901cf72ddc24caf9a7821"
+    },
+    {
+      "runtime_path": "/home/colton-mcclain/drex-dotz/dotz/phoenix/commerce/public/agents/server.json",
+      "sha256": "2a82cc4215435b31bc1531aed2424ac07d7bb74759be928d6556f09c58bece3b"
+    }
+  ],
+  "base_modules": "Existing PHOENIX deployment; tested using an isolated overlay of phoenix-agent-commerce base modules and the changed cycle/acquisition modules. No claim of whole-repository suite validation.",
+  "scheduler": "Existing phoenix-controller.timer",
+  "backup_directory": "/home/colton-mcclain/audit-reports/agent-acquisition-v2-20261025-backup"
+}

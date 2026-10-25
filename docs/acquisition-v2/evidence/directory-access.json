@@ -1,0 +1,12 @@
+[
+  {
+    "url": "https://skills.sh/api/v1/skills/search?q=elyreon&limit=5",
+    "status": 401,
+    "body": "{\"error\":\"authentication_required\",\"message\":\"This endpoint requires authentication. Pass a Vercel OIDC token (Authorization: Bearer <VERCEL_OIDC_TOKEN>) \u2014 see https://skills.sh/docs/api#authentication.\"}"
+  },
+  {
+    "url": "https://glama.ai/api/mcp/v1/connectors?first=5",
+    "status": 401,
+    "body": "{\"error\":{\"code\":\"unauthorized\",\"message\":\"This endpoint requires an API key. Create one at https://glama.ai/settings/api-keys.\\n\\nUse of this data is governed by the API Data License, which requires visible attribution to Glama on every page that displays it, and a link to a record's Glama listing "
+  }
+]

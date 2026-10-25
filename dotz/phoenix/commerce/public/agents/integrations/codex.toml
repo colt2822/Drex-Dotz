@@ -1,7 +1,7 @@
 [mcp_servers.elyreon_workflow_rescue]
 url = "https://elyraon.com.co/agents/mcp"
-bearer_token_env_var = "ELYREON_WORKFLOW_RESCUE_TOKEN"
+bearer_token_env_var = "ELYREON_WORKFLOW_TOKEN"
 
 [mcp_servers.elyreon_payload_validator]
 url = "https://elyreon-payload-validator.colt2822.workers.dev/mcp"
-bearer_token_env_var = "ELYREON_PAYLOAD_VALIDATOR_TOKEN"
+bearer_token_env_var = "ELYREON_PAYLOAD_TOKEN"

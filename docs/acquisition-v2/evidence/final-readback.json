@@ -1,0 +1,287 @@
+{
+  "workflow": {
+    "health": {
+      "ok": true,
+      "capability": "check_n8n_workflow",
+      "paid_enabled": false
+    },
+    "registry_manifest": {
+      "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+      "name": "co.com.elyraon/workflow-rescue",
+      "title": "ELYREON n8n Workflow Rescue",
+      "description": "Static n8n workflow validator: workflow errors and repair suggestions. No execution.",
+      "version": "1.0.2",
+      "websiteUrl": "https://elyraon.com.co/agents/",
+      "repository": {
+        "url": "https://github.com/colt2822/Drex-Dotz",
+        "source": "github",
+        "subfolder": "dotz/phoenix/commerce"
+      },
+      "remotes": [
+        {
+          "type": "streamable-http",
+          "url": "https://elyraon.com.co/agents/mcp",
+          "headers": [
+            {
+              "name": "Authorization",
+              "description": "Free token: POST https://elyraon.com.co/agents/trial with JSON {}. Enter Bearer TOKEN.",
+              "isRequired": true,
+              "isSecret": true
+            }
+          ]
+        }
+      ]
+    },
+    "events_in_page": 54,
+    "page_limit": 500,
+    "stage_counts": [
+      {
+        "stage": "TOKEN_ISSUED",
+        "synthetic": true,
+        "events": 12
+      },
+      {
+        "stage": "CONNECTED",
+        "synthetic": true,
+        "events": 8
+      },
+      {
+        "stage": "FREE_CALL",
+        "synthetic": true,
+        "events": 33
+      },
+      {
+        "stage": "CALL_FAILED",
+        "synthetic": true,
+        "events": 1
+      }
+    ],
+    "public_unverified_invocations": 0
+  },
+  "payload": {
+    "health": {
+      "ok": true,
+      "capability": "validate_payload",
+      "version": "1.0.1",
+      "limits": {
+        "bytes": 32768,
+        "depth": 12,
+        "values": 2048,
+        "schemas": 128,
+        "errors": 1,
+        "read_ms": 3000
+      },
+      "paid_enabled": false
+    },
+    "registry_manifest": {
+      "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+      "name": "co.com.elyraon/payload-validator",
+      "title": "ELYREON JSON Schema Payload Validator",
+      "description": "JSON Schema validator for API payloads via MCP: bounded checks and structured pass/fail errors.",
+      "version": "1.0.1",
+      "websiteUrl": "https://elyreon-payload-validator.colt2822.workers.dev",
+      "repository": {
+        "url": "https://github.com/colt2822/Drex-Decision-Gateway-for-Coding-Agents",
+        "source": "github",
+        "subfolder": "distribution/payload-validator"
+      },
+      "remotes": [
+        {
+          "type": "streamable-http",
+          "url": "https://elyreon-payload-validator.colt2822.workers.dev/mcp",
+          "headers": [
+            {
+              "name": "Authorization",
+              "description": "Free token: POST https://elyreon-payload-validator.colt2822.workers.dev/trial with JSON {\"source\":\"mcp_registry\"}. Enter Bearer TOKEN.",
+              "isRequired": true,
+              "isSecret": true
+            }
+          ]
+        }
+      ]
+    },
+    "events_in_page": 20,
+    "page_limit": 500,
+    "stage_counts": [
+      {
+        "stage": "TOKEN_ISSUED",
+        "synthetic": true,
+        "events": 4
+      },
+      {
+        "stage": "CONNECTED",
+        "synthetic": true,
+        "events": 4
+      },
+      {
+        "stage": "INVOCATION",
+        "synthetic": true,
+        "events": 11
+      },
+      {
+        "stage": "REJECTED",
+        "synthetic": true,
+        "events": 1
+      }
+    ],
+    "public_unverified_invocations": 0
+  },
+  "crm": {
+    "workflow_verified_identities": 0,
+    "payload_verified_identities": 0,
+    "existing_live_seats": [
+      {
+        "slot": "PHOENIX-01",
+        "instance_id": "phx-01-g1c1-dfcd9d3e",
+        "spawn_at": 1792833653.7125754,
+        "deadline_at": 1792920053.7125754
+      },
+      {
+        "slot": "PHOENIX-02",
+        "instance_id": "phx-02-g1c1-2812acbf",
+        "spawn_at": 1792833653.7290804,
+        "deadline_at": 1792920053.7290804
+      },
+      {
+        "slot": "PHOENIX-03",
+        "instance_id": "phx-03-g1c1-6499be44",
+        "spawn_at": 1792833653.7465339,
+        "deadline_at": 1792920053.7465339
+      },
+      {
+        "slot": "PHOENIX-04",
+        "instance_id": "phx-04-g1c1-c14cb368",
+        "spawn_at": 1792833653.763691,
+        "deadline_at": 1792920053.763691
+      },
+      {
+        "slot": "PHOENIX-05",
+        "instance_id": "phx-05-g1c1-417c954a",
+        "spawn_at": 1792833653.780584,
+        "deadline_at": 1792920053.780584
+      }
+    ],
+    "research_candidates": 15,
+    "acquisition_last_tick": {
+      "at": 1792905245.9324028,
+      "sources": [
+        {
+          "query": "repo:czlonkowski/n8n-mcp is:issue is:open validation",
+          "prospects": [
+            "acq-369bbc5139150f5dd8",
+            "acq-64fd8359528991e50d",
+            "acq-f214aa9076b8cacc0e",
+            "acq-543b4594d1e9ee2b2b",
+            "acq-61d295f1f9b9ea9a95"
+          ],
+          "total_reported": 10,
+          "independent_demand_not_customer": true
+        },
+        {
+          "query": "repo:langchain-ai/langchain is:issue is:open MCP schema",
+          "prospects": [
+            "acq-466f98101c7f2359da",
+            "acq-f34e26a20c51fac754",
+            "acq-c2d16eb1d421324f3a",
+            "acq-da3046c7d258193233",
+            "acq-2eed3c262179b18f4f"
+          ],
+          "total_reported": 24,
+          "independent_demand_not_customer": true
+        },
+        {
+          "query": "is:issue is:open \"JSON schema\" \"bounty\"",
+          "prospects": [
+            "acq-e955fa1ef04d6eb167",
+            "acq-3d56a452af1e739874",
+            "acq-723762d19cb55a1269",
+            "acq-ba66ef2803f2543740",
+            "acq-4ff17922d711fa83a0"
+          ],
+          "total_reported": 630,
+          "independent_demand_not_customer": true
+        }
+      ],
+      "outreach": "STOP preserved; prepared contributions only",
+      "paid_enabled": false
+    },
+    "payload_monitor": {
+      "at": 1792905321.2154152,
+      "outreach": "STOP preserved; no sender invoked",
+      "paid_enabled": false,
+      "imported_events": 13,
+      "health": true,
+      "registry_verified": true,
+      "usage": [
+        {
+          "stage": "CONNECTED",
+          "source": "github",
+          "synthetic": 1,
+          "events": 3,
+          "clients": 2
+        },
+        {
+          "stage": "CONNECTED",
+          "source": "mcp_registry",
+          "synthetic": 1,
+          "events": 1,
+          "clients": 1
+        },
+        {
+          "stage": "INVOCATION",
+          "source": "github",
+          "synthetic": 1,
+          "events": 7,
+          "clients": 2
+        },
+        {
+          "stage": "INVOCATION",
+          "source": "mcp_registry",
+          "synthetic": 1,
+          "events": 4,
+          "clients": 1
+        },
+        {
+          "stage": "REJECTED",
+          "source": "mcp_registry",
+          "synthetic": 1,
+          "events": 1,
+          "clients": 1
+        },
+        {
+          "stage": "TOKEN_ISSUED",
+          "source": "github",
+          "synthetic": 1,
+          "events": 3,
+          "clients": 3
+        },
+        {
+          "stage": "TOKEN_ISSUED",
+          "source": "mcp_registry",
+          "synthetic": 1,
+          "events": 1,
+          "clients": 1
+        }
+      ],
+      "public_repeat_tokens": 0,
+      "verified_external_users": 0,
+      "verified_installations": 0,
+      "verified_repeat_users": 0,
+      "actual_external_installations": null,
+      "actual_external_users": null,
+      "observability": "Verified counts reflect admitted evidence only; unobserved installations and anonymous identity remain UNKNOWN.",
+      "verified_revenue_cents": 0,
+      "provider_inference_cost_usd": 0,
+      "hosting_cost_usd": null,
+      "attribution": "Token source is client-claimed; installation and identity require independent evidence."
+    }
+  },
+  "verified_external_users": 0,
+  "verified_external_calls": 0,
+  "verified_repeat_external_users": 0,
+  "verified_revenue_usd": 0,
+  "actual_external_installations": null,
+  "hosting_cost_usd": null,
+  "net_revenue_after_hosting_usd": null,
+  "commercial_inquiries": "UNKNOWN; none verified by this run"
+}

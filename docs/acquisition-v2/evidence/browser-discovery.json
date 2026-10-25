@@ -1,0 +1,55 @@
+{
+  "controlled": true,
+  "central_catalog_queries": [
+    {
+      "query": "n8n",
+      "matches": [
+        "ELYREON n8n Workflow Rescue"
+      ]
+    },
+    {
+      "query": "n8n workflow validator",
+      "matches": [
+        "ELYREON n8n Workflow Rescue"
+      ]
+    },
+    {
+      "query": "workflow error",
+      "matches": [
+        "ELYREON n8n Workflow Rescue"
+      ]
+    },
+    {
+      "query": "workflow repair",
+      "matches": [
+        "ELYREON n8n Workflow Rescue"
+      ]
+    },
+    {
+      "query": "JSON schema validator",
+      "matches": [
+        "ELYREON JSON Schema Payload Validator"
+      ]
+    },
+    {
+      "query": "validate API payload",
+      "matches": [
+        "ELYREON JSON Schema Payload Validator"
+      ]
+    },
+    {
+      "query": "MCP validation tool",
+      "matches": [
+        "ELYREON JSON Schema Payload Validator"
+      ]
+    },
+    {
+      "query": "coding agent verification",
+      "matches": [
+        "ELYREON n8n Workflow Rescue",
+        "ELYREON JSON Schema Payload Validator"
+      ]
+    }
+  ],
+  "third_party_semantic_search": "name-only registry limitation unchanged"
+}

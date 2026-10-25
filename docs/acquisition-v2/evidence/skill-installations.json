@@ -1,0 +1,20 @@
+[
+  {
+    "service": "workflow",
+    "skill": "elyreon-workflow-check",
+    "installed_path": "/tmp/elyreon-skill-install-v2/workflow/.agents/skills/elyreon-workflow-check/SKILL.md",
+    "sha256": "c33e819cfa8d7e532793abe76b2c98863e3f182853469ad78fe868527dba2963",
+    "telemetry_disabled": true,
+    "controlled": true,
+    "external_installation": false
+  },
+  {
+    "service": "payload",
+    "skill": "elyreon-payload-validator",
+    "installed_path": "/tmp/elyreon-skill-install-v2/payload/.agents/skills/elyreon-payload-validator/SKILL.md",
+    "sha256": "f1e57339136fc5022b2c2fab8709d62144fa0fecdca5f062498f78351479f954",
+    "telemetry_disabled": true,
+    "controlled": true,
+    "external_installation": false
+  }
+]
