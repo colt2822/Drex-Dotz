@@ -42,8 +42,8 @@ Workflow Rescue: `structural_pass`, `report.findings`, `report.limitations`, `re
 ## Install the existing skills
 
 ```sh
-npx skills add https://github.com/colt2822/Drex-Dotz/tree/codex/agent-acquisition-v2 --skill elyreon-workflow-check
-npx skills add https://github.com/colt2822/Drex-Decision-Gateway-for-Coding-Agents/tree/codex/payload-acquisition-v2 --skill elyreon-payload-validator
+npx skills add https://github.com/colt2822/Drex-Dotz/tree/agent-acquisition-v2 --skill elyreon-workflow-check
+npx skills add https://github.com/colt2822/Drex-Decision-Gateway-for-Coding-Agents/tree/payload-acquisition-v2 --skill elyreon-payload-validator
 ```
 
 Or copy each public SKILL.md into a client-supported skill folder. Controlled CLI installs disable telemetry (`DISABLE_TELEMETRY=1 DO_NOT_TRACK=1`) so they are not promoted as organic installations.
