@@ -1,0 +1,27 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "co.com.elyraon/workflow-rescue",
+  "title": "ELYREON n8n Workflow Rescue",
+  "description": "Free static n8n workflow validation: broken references, duplicate nodes and structured evidence.",
+  "version": "1.0.1",
+  "websiteUrl": "https://elyraon.com.co/agents/",
+  "repository": {
+    "url": "https://github.com/colt2822/Drex-Dotz",
+    "source": "github",
+    "subfolder": "dotz/phoenix/commerce"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://elyraon.com.co/agents/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Free token: POST https://elyraon.com.co/agents/trial with JSON {}. Enter Bearer TOKEN.",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

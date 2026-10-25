@@ -1,0 +1,131 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ELYREON Workflow Rescue",
+    "version": "1.0.0",
+    "description": "Free static n8n export validation. No execution; 200 nodes and 64 KiB maximum."
+  },
+  "servers": [
+    {
+      "url": "https://elyraon.com.co"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "trialBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "paths": {
+    "/agents/trial": {
+      "post": {
+        "operationId": "createTrial",
+        "summary": "Get a free bearer token, subject to shared rate limits",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "type": "string"
+                  },
+                  "campaign": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Trial token and opaque client ID"
+          },
+          "429": {
+            "description": "Enrollment quota reached"
+          }
+        }
+      }
+    },
+    "/agents/check": {
+      "post": {
+        "operationId": "check_n8n_workflow",
+        "summary": "Return static structural validation evidence for a sanitized n8n export",
+        "security": [
+          {
+            "trialBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "workflow"
+                ],
+                "properties": {
+                  "workflow": {
+                    "type": "object",
+                    "required": [
+                      "nodes",
+                      "connections"
+                    ],
+                    "properties": {
+                      "nodes": {
+                        "type": "array",
+                        "maxItems": 200,
+                        "items": {
+                          "type": "object"
+                        }
+                      },
+                      "connections": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Static report, structural_pass, limitations, receipt and input SHA256. Defects can be present in a successful service call."
+          },
+          "400": {
+            "description": "Unsupported or unsanitized input"
+          },
+          "401": {
+            "description": "Trial bearer token required"
+          },
+          "409": {
+            "description": "Idempotency conflict or pending request"
+          },
+          "413": {
+            "description": "Input exceeds limits"
+          },
+          "429": {
+            "description": "Quota reached"
+          }
+        }
+      }
+    }
+  }
+}

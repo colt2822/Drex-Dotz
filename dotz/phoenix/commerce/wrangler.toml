@@ -1,0 +1,24 @@
+name = "elyreon-phoenix-agent-commerce"
+main = "worker.mjs"
+compatibility_date = "2026-10-24"
+workers_dev = false
+routes = [
+ { pattern = "elyraon.com.co/agents/*", zone_name = "elyraon.com.co" },
+ { pattern = "elyraon.com.co/.well-known/ai-catalog.json", zone_name = "elyraon.com.co" },
+ { pattern = "elyraon.com.co/.well-known/ard.json", zone_name = "elyraon.com.co" },
+ { pattern = "elyraon.com.co/.well-known/agent-card.json", zone_name = "elyraon.com.co" },
+ { pattern = "elyraon.com.co/.well-known/mcp-registry-auth", zone_name = "elyraon.com.co" }
+]
+# Existing Workers Free plan enforces its platform 10 ms CPU ceiling.
+# Do not upgrade the account or configure a paid-plan CPU allowance.
+[vars]
+PUBLIC_ORIGIN = "https://elyraon.com.co"
+PAID_ENABLED = "NO"
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = true
+[[d1_databases]]
+binding = "DB"
+database_name = "elyraon-commerce"
+database_id = "a8e61aef-c9e8-4980-9eae-60ae4a728c12"

@@ -1,0 +1,34 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>ELYREON Workflow Rescue — n8n validation for AI agents</title>
+<meta name="description" content="Free bounded static n8n workflow validation via MCP, HTTP, A2A and Agent Skills. Structured evidence without executing code.">
+<link rel="ard" href="/.well-known/ard.json"><link rel="ai-catalog" href="/.well-known/ai-catalog.json">
+<style>body{max-width:56rem;margin:3rem auto;padding:0 1rem;font:18px/1.6 system-ui;color:#182437;background:#fafafa}pre{padding:1rem;background:#eaeef3;overflow:auto}a{color:#1649ad}h1{line-height:1.2}</style>
+<h1>Check an n8n export before your agent imports it.</h1>
+<p>ELYREON Workflow Rescue finds broken connections, duplicate node IDs, disabled nodes and configuration risks. It returns structured findings, evidence, repair suggestions and an input hash. It performs static analysis; it does not execute workflow code or verify runtime behavior.</p>
+<h2>Try it free</h2>
+<p>Send only a sanitized export you are permitted to share. No payment, wallet or fleet account is required. Limits: 20 calls per client per day, 64 KiB per request and 200 nodes. Shared limits also apply.</p>
+<pre>curl https://elyraon.com.co/agents/trial \
+  -H 'Content-Type: application/json' \
+  -d '{"source":"direct_api","campaign":"first-check"}'
+
+# Keep the returned token private. Wrap your export as {"workflow": ...}.
+curl https://elyraon.com.co/agents/check \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: first-check-001' \
+  --data-binary @sanitized-request.json</pre>
+<p>The result contains <code>structural_pass</code>, <code>report.findings</code>, <code>report.limitations</code>, <code>receipt_id</code> and <code>input_sha256</code>. A successful check can find a defective workflow. Runtime risks remain explicitly unverified.</p>
+<h2>Connect your agent</h2>
+<p><a href="server.json">MCP server manifest</a> · <a href="SKILL.md">Agent Skill</a> · <a href="openapi.json">OpenAPI</a> · <a href="/.well-known/agent-card.json">A2A 0.3 Agent Card</a> · <a href="/.well-known/ard.json">ARD manifest</a></p>
+<pre># Install from the public source branch (controlled installs are not customers):
+npx skills add colt2822/Drex-Dotz --skill elyreon-workflow-check
+
+# Claude Code — replace YOUR_TOKEN with your free trial token:
+claude mcp add --transport http elyreon-workflow-rescue \
+  https://elyraon.com.co/agents/mcp --header 'Authorization: Bearer YOUR_TOKEN'</pre>
+<p>For Codex or another MCP client, configure the Streamable HTTP URL <code>https://elyraon.com.co/agents/mcp</code> and the bearer header. Discover tools with <code>tools/list</code>, then invoke <code>check_n8n_workflow</code> with <code>{"workflow": EXPORT}</code>. No internal ELYREON access is granted.</p>
+<h2>Privacy and price</h2>
+<p>Requests and reports are processed transiently and are not retained. Operational telemetry contains opaque client IDs, client-claimed source, call outcomes and timing. Operational records expire after 30 days; source claims do not establish verified adoption. Keep credentials and private information out of shared exports. A <a href="/tools/workflow-rescue/">local browser version</a> keeps your export on your device.</p>
+<p>The trial is free. A candidate price of $0.01/call for higher-volume use is under evaluation; no paid endpoint or payment collection is active. Paid availability requires approved terms, receiving-account verification and settlement reconciliation.</p>
+<p>Published by <a href="/">ELYREON</a>, operated through PHOENIX's existing five commercial seats. Engineering fulfillment remains with existing Agent Floor workers.</p>
+</html>

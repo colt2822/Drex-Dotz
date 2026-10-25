@@ -1,0 +1,68 @@
+{
+  "entries": [
+    {
+      "identifier": "urn:air:elyraon.com.co:server:workflow-rescue",
+      "displayName": "ELYREON Workflow Rescue",
+      "type": "application/mcp-server+json",
+      "url": "https://elyraon.com.co/agents/server.json",
+      "description": "Free bounded static n8n workflow validation. Sanitized exports only; no code execution or runtime verification. Obtain a free trial token at /agents/trial.",
+      "capabilities": [
+        "n8n",
+        "workflow-validation",
+        "static-analysis"
+      ],
+      "representativeQueries": [
+        "Check my n8n export for missing connection targets",
+        "Find duplicate nodes and broken references in an n8n workflow"
+      ]
+    },
+    {
+      "identifier": "urn:air:elyraon.com.co:skill:workflow-check",
+      "displayName": "ELYREON Workflow Rescue",
+      "type": "text/markdown",
+      "url": "https://elyraon.com.co/agents/SKILL.md",
+      "description": "Free bounded static n8n workflow validation. Sanitized exports only; no code execution or runtime verification. Obtain a free trial token at /agents/trial.",
+      "capabilities": [
+        "n8n",
+        "workflow-validation",
+        "static-analysis"
+      ],
+      "representativeQueries": [
+        "Check my n8n export for missing connection targets",
+        "Find duplicate nodes and broken references in an n8n workflow"
+      ]
+    },
+    {
+      "identifier": "urn:air:elyraon.com.co:agent:workflow-check",
+      "displayName": "ELYREON Workflow Rescue",
+      "type": "application/a2a-agent-card+json",
+      "url": "https://elyraon.com.co/.well-known/agent-card.json",
+      "description": "Free bounded static n8n workflow validation. Sanitized exports only; no code execution or runtime verification. Obtain a free trial token at /agents/trial.",
+      "capabilities": [
+        "n8n",
+        "workflow-validation",
+        "static-analysis"
+      ],
+      "representativeQueries": [
+        "Check my n8n export for missing connection targets",
+        "Find duplicate nodes and broken references in an n8n workflow"
+      ]
+    },
+    {
+      "identifier": "urn:air:elyraon.com.co:api:workflow-check",
+      "displayName": "ELYREON Workflow Rescue",
+      "type": "application/openapi+json",
+      "url": "https://elyraon.com.co/agents/openapi.json",
+      "description": "Free bounded static n8n workflow validation. Sanitized exports only; no code execution or runtime verification. Obtain a free trial token at /agents/trial.",
+      "capabilities": [
+        "n8n",
+        "workflow-validation",
+        "static-analysis"
+      ],
+      "representativeQueries": [
+        "Check my n8n export for missing connection targets",
+        "Find duplicate nodes and broken references in an n8n workflow"
+      ]
+    }
+  ]
+}

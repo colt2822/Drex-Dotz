@@ -1,0 +1,50 @@
+{
+  "protocolVersion": "0.3.0",
+  "name": "ELYREON Workflow Rescue",
+  "description": "Free static n8n export validation; no code execution. POST /agents/trial for bearer token. Send one data part containing {workflow: export}.",
+  "url": "https://elyraon.com.co/agents/a2a",
+  "preferredTransport": "JSONRPC",
+  "version": "1.0.0",
+  "provider": {
+    "organization": "ELYREON",
+    "url": "https://elyraon.com.co"
+  },
+  "documentationUrl": "https://elyraon.com.co/agents/",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false
+  },
+  "securitySchemes": {
+    "trialBearer": {
+      "type": "http",
+      "scheme": "bearer",
+      "description": "Free token from POST /agents/trial"
+    }
+  },
+  "security": [
+    {
+      "trialBearer": []
+    }
+  ],
+  "defaultInputModes": [
+    "application/json"
+  ],
+  "defaultOutputModes": [
+    "application/json"
+  ],
+  "skills": [
+    {
+      "id": "check_n8n_workflow",
+      "name": "Check n8n export",
+      "description": "Return static structural defects, risks, repair suggestions and reproducible input hash. 200 nodes / 64 KiB max. Free 20 calls/day/client.",
+      "tags": [
+        "n8n",
+        "validation",
+        "static-analysis"
+      ],
+      "examples": [
+        "Find missing connection targets in this sanitized workflow export"
+      ]
+    }
+  ]
+}
