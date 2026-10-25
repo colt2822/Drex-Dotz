@@ -64,5 +64,19 @@
         "Find duplicate nodes and broken references in an n8n workflow"
       ]
     }
+  ],
+  "companion_services": [
+    {
+      "name": "ELYREON n8n Workflow Rescue",
+      "mcp": "https://elyraon.com.co/agents/mcp",
+      "skill": "https://elyraon.com.co/agents/SKILL.md",
+      "description": "Static n8n workflow validation with structural findings and repair suggestions; no runtime execution or autonomous repair."
+    },
+    {
+      "name": "ELYREON JSON Schema Payload Validator",
+      "mcp": "https://elyreon-payload-validator.colt2822.workers.dev/mcp",
+      "skill": "https://elyreon-payload-validator.colt2822.workers.dev/SKILL.md",
+      "description": "Deterministic JSON API payload validation against a bounded JSON Schema 2020-12 subset; unsupported keywords are rejected."
+    }
   ]
 }

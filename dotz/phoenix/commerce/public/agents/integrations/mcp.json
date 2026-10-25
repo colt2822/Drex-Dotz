@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "workflow-rescue": {
+      "url": "https://elyraon.com.co/agents/mcp",
+      "headers": {
+        "Authorization": "Bearer REPLACE_WITH_WORKFLOW_RESCUE_TOKEN"
+      }
+    },
+    "payload-validator": {
+      "url": "https://elyreon-payload-validator.colt2822.workers.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer REPLACE_WITH_PAYLOAD_VALIDATOR_TOKEN"
+      }
+    }
+  }
+}

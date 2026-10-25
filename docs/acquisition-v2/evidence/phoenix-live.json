@@ -1,0 +1,45 @@
+{
+  "at": 1792905245.9324028,
+  "sources": [
+    {
+      "query": "repo:czlonkowski/n8n-mcp is:issue is:open validation",
+      "prospects": [
+        "acq-369bbc5139150f5dd8",
+        "acq-64fd8359528991e50d",
+        "acq-f214aa9076b8cacc0e",
+        "acq-543b4594d1e9ee2b2b",
+        "acq-61d295f1f9b9ea9a95"
+      ],
+      "total_reported": 10,
+      "independent_demand_not_customer": true
+    },
+    {
+      "query": "repo:langchain-ai/langchain is:issue is:open MCP schema",
+      "prospects": [
+        "acq-466f98101c7f2359da",
+        "acq-f34e26a20c51fac754",
+        "acq-c2d16eb1d421324f3a",
+        "acq-da3046c7d258193233",
+        "acq-2eed3c262179b18f4f"
+      ],
+      "total_reported": 24,
+      "independent_demand_not_customer": true
+    },
+    {
+      "query": "is:issue is:open \"JSON schema\" \"bounty\"",
+      "prospects": [
+        "acq-e955fa1ef04d6eb167",
+        "acq-3d56a452af1e739874",
+        "acq-723762d19cb55a1269",
+        "acq-ba66ef2803f2543740",
+        "acq-4ff17922d711fa83a0"
+      ],
+      "total_reported": 630,
+      "independent_demand_not_customer": true
+    }
+  ],
+  "outreach": "STOP preserved; prepared contributions only",
+  "paid_enabled": false,
+  "existing_seats": 5,
+  "lifecycles_unchanged": true
+}

@@ -1,0 +1,17 @@
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "elyreon-payload-token",
+      "description": "Free token from POST /trial. Use test:true for controlled evaluation.",
+      "password": true
+    }
+  ],
+  "servers": {
+    "elyreon-payload-validator": {
+      "type": "http",
+      "url": "https://elyreon-payload-validator.colt2822.workers.dev/mcp",
+      "headers": { "Authorization": "Bearer ${input:elyreon-payload-token}" }
+    }
+  }
+}

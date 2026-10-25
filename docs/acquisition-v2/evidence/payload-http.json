@@ -1,0 +1,26 @@
+{
+  "controlled": true,
+  "client_id": "5c32047d-b1e5-4403-8295-f076aca18584",
+  "results": [
+    {
+      "valid": true,
+      "verdict": "PASS",
+      "errors": [],
+      "dialect": "2020-12-bounded",
+      "limitations": "Supported keywords only; no refs, regex, formats, combinators, coercion, defaults or network access.",
+      "receipt_id": "3099d9f4-8606-45ea-9a33-acddc6976830",
+      "client_id": "5c32047d-b1e5-4403-8295-f076aca18584",
+      "charged_usd": 0
+    },
+    {
+      "valid": true,
+      "verdict": "PASS",
+      "errors": [],
+      "dialect": "2020-12-bounded",
+      "limitations": "Supported keywords only; no refs, regex, formats, combinators, coercion, defaults or network access.",
+      "receipt_id": "f10c8855-2fba-43aa-b555-7a22334c7315",
+      "client_id": "5c32047d-b1e5-4403-8295-f076aca18584",
+      "charged_usd": 0
+    }
+  ]
+}

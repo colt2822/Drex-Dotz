@@ -1,0 +1,6 @@
+{
+  "controlled": true,
+  "exit_code": 0,
+  "output": "[{'type': 'text', 'text': '{\"valid\":true,\"verdict\":\"PASS\",\"errors\":[],\"dialect\":\"2020-12-bounded\",\"limitations\":\"Supported keywords only; no refs, regex, formats, combinators, coercion, defaults or network access.\",\"receipt_id\":\"f46eb199-36b5-4539-a194-be4d59bbfa44\",\"client_id\":\"5c32047d-b1e5-4403-8295-f076aca18584\",\"charged_usd\":0}', 'id': 'lc_68db86db-a183-4df2-8791-27317f533745'}]\n",
+  "stderr": "/home/colton-mcclain/worktrees/phoenix-acquisition-v2/dotz/phoenix/commerce/public/agents/integrations/langchain_check.py:6: LangChainBetaWarning: `langchain.mcp` is in beta. It is actively being worked on, so the API may change.\n  from langchain.mcp import MCPAdapter\n"
+}

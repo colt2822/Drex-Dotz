@@ -1,0 +1,27 @@
+[
+  {
+    "url": "https://elyraon.com.co/agents/health",
+    "result": {
+      "ok": true,
+      "capability": "check_n8n_workflow",
+      "paid_enabled": false
+    }
+  },
+  {
+    "url": "https://elyreon-payload-validator.colt2822.workers.dev/health",
+    "result": {
+      "ok": true,
+      "capability": "validate_payload",
+      "version": "1.0.1",
+      "limits": {
+        "bytes": 32768,
+        "depth": 12,
+        "values": 2048,
+        "schemas": 128,
+        "errors": 1,
+        "read_ms": 3000
+      },
+      "paid_enabled": false
+    }
+  }
+]

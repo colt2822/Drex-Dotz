@@ -1,9 +1,15 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-<title>ELYREON Workflow Rescue — n8n validation for AI agents</title>
+<title>ELYREON agent tools — n8n workflow and JSON Schema validation</title>
 <meta name="description" content="Free bounded static n8n workflow validation via MCP, HTTP, A2A and Agent Skills. Structured evidence without executing code.">
 <link rel="ard" href="/.well-known/ard.json"><link rel="ai-catalog" href="/.well-known/ai-catalog.json">
 <style>body{max-width:56rem;margin:3rem auto;padding:0 1rem;font:18px/1.6 system-ui;color:#182437;background:#fafafa}pre{padding:1rem;background:#eaeef3;overflow:auto}a{color:#1649ad}h1{line-height:1.2}</style>
-<h1>Check an n8n export before your agent imports it.</h1>
+<h1>Validation tools for your agent’s next change.</h1>
+<p>Two free services. Use Workflow Rescue before importing an n8n export, or Payload Validator before sending generated JSON to an API. Connect over MCP or HTTP; no wallet or paid account required.</p>
+<p><a href="integrations/">Install in Codex, Claude Code, OpenCode, Cursor, Hermes, n8n or a Python agent</a> · <a href="catalog.json">Machine-readable catalog</a></p>
+<label for="tool-search">Find a validation tool</label> <input id="tool-search" type="search" placeholder="n8n or JSON schema validator">
+<div id="tools"></div>
+<script src="catalog.js" defer></script>
+<h2>Workflow Rescue: check an n8n export before import</h2>
 <p>ELYREON Workflow Rescue finds broken connections, duplicate node IDs, disabled nodes and configuration risks. It returns structured findings, evidence, repair suggestions and an input hash. It performs static analysis; it does not execute workflow code or verify runtime behavior.</p>
 <h2>Try it free</h2>
 <p>Send only a sanitized export you are permitted to share. No payment, wallet or fleet account is required. Limits: 20 calls per client per day, 64 KiB per request and 200 nodes. Shared limits also apply.</p>
@@ -21,12 +27,22 @@ curl https://elyraon.com.co/agents/check \
 <h2>Connect your agent</h2>
 <p><a href="server.json">MCP server manifest</a> · <a href="SKILL.md">Agent Skill</a> · <a href="openapi.json">OpenAPI</a> · <a href="/.well-known/agent-card.json">A2A 0.3 Agent Card</a> · <a href="/.well-known/ard.json">ARD manifest</a></p>
 <pre># Install from the public source branch (controlled installs are not customers):
-npx skills add colt2822/Drex-Dotz --skill elyreon-workflow-check
+npx skills add https://github.com/colt2822/Drex-Dotz/tree/codex/agent-acquisition-v2 --skill elyreon-workflow-check
 
 # Claude Code — replace YOUR_TOKEN with your free trial token:
 claude mcp add --transport http elyreon-workflow-rescue \
   https://elyraon.com.co/agents/mcp --header 'Authorization: Bearer YOUR_TOKEN'</pre>
 <p>For Codex or another MCP client, configure the Streamable HTTP URL <code>https://elyraon.com.co/agents/mcp</code> and the bearer header. Discover tools with <code>tools/list</code>, then invoke <code>check_n8n_workflow</code> with <code>{"workflow": EXPORT}</code>. No internal ELYREON access is granted.</p>
+<h2>Payload Validator: check JSON before an API call</h2>
+<p>Validate sanitized JSON against a bounded JSON Schema 2020-12 subset and receive <code>PASS</code>, <code>FAIL</code>, or <code>REJECTED</code> with a structured error and receipt. Unsupported schemas are rejected explicitly. No references, regex, formats or combinators.</p>
+<p><a href="https://elyreon-payload-validator.colt2822.workers.dev/SKILL.md">Payload Validator skill and limits</a> · <a href="integrations/">Install and run a first check</a></p>
+<pre>curl https://elyreon-payload-validator.colt2822.workers.dev/trial \
+  -H 'Content-Type: application/json' -d '{"source":"direct"}'
+
+curl https://elyreon-payload-validator.colt2822.workers.dev/validate \
+  -H 'Content-Type: application/json' -H 'Authorization: Bearer YOUR_TOKEN' \
+  -d '{"schema":{"type":"object","required":["id"],"properties":{"id":{"type":"integer"}}},"payload":{"id":42}}'</pre>
+<p>Save your token privately and reuse it after the next edit. Each service has a separate token and a free limit of 20 calls/token/day. Controlled evaluations must enroll with <code>"test":true</code>.</p>
 <h2>Privacy and price</h2>
 <p>Requests and reports are processed transiently and are not retained. Operational telemetry contains opaque client IDs, client-claimed source, call outcomes and timing. Operational records expire after 30 days; source claims do not establish verified adoption. Keep credentials and private information out of shared exports. A <a href="/tools/workflow-rescue/">local browser version</a> keeps your export on your device.</p>
 <p>The trial is free. A candidate price of $0.01/call for higher-volume use is under evaluation; no paid endpoint or payment collection is active. Paid availability requires approved terms, receiving-account verification and settlement reconciliation.</p>

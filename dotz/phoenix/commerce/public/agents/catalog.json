@@ -1,0 +1,37 @@
+{
+  "services": [
+    {
+      "id": "workflow-rescue",
+      "name": "ELYREON n8n Workflow Rescue",
+      "url": "https://elyraon.com.co/agents/mcp",
+      "base": "https://elyraon.com.co/agents",
+      "skill": "https://elyraon.com.co/agents/SKILL.md",
+      "tool": "check_n8n_workflow",
+      "terms": [
+        "n8n",
+        "n8n workflow validator",
+        "workflow error",
+        "workflow repair",
+        "coding agent verification"
+      ],
+      "description": "Static n8n workflow validation with structural findings and repair suggestions; no runtime execution or autonomous repair."
+    },
+    {
+      "id": "payload-validator",
+      "name": "ELYREON JSON Schema Payload Validator",
+      "url": "https://elyreon-payload-validator.colt2822.workers.dev/mcp",
+      "base": "https://elyreon-payload-validator.colt2822.workers.dev",
+      "skill": "https://elyreon-payload-validator.colt2822.workers.dev/SKILL.md",
+      "tool": "validate_payload",
+      "terms": [
+        "JSON schema validator",
+        "validate API payload",
+        "MCP validation tool",
+        "coding agent verification"
+      ],
+      "description": "Deterministic JSON API payload validation against a bounded JSON Schema 2020-12 subset; unsupported keywords are rejected."
+    }
+  ],
+  "payments_enabled": false,
+  "source_attribution": "client-claimed; requires independent evidence"
+}

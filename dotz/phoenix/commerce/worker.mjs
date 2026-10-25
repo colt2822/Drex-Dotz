@@ -10,7 +10,7 @@ const enc = new TextEncoder();
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'cache-control': 'no-store', ...headers } });
 const fail = (status, message) => { throw Object.assign(new Error(message), { status }); };
 export async function hash(value) { return [...new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode(value)))].map(x => x.toString(16).padStart(2,'0')).join(''); }
-const sources = new Set(['mcp_registry','skill_directory','x402_bazaar','ard','a2a','github','direct_api','other']);
+const sources = new Set(['mcp_registry','skill_directory','x402_bazaar','ard','a2a','github','direct_api','codex','claude_code','opencode','cursor','hermes','n8n','langchain','crewai','openai_agents','vscode','other']);
 async function quota(env, bucket, limit, seconds) {
   const now = Math.floor(Date.now()/1000), expires = (Math.floor(now/seconds)+1)*seconds;
   const key = `${bucket}:${expires}`;
@@ -139,13 +139,13 @@ export default { async fetch(req,env) {
     if(path==='/agents/trial' && req.method==='POST') {
       if(!env.PRIVACY_SALT) fail(503,'Trial enrollment unavailable');
       const b=await body(req), ip=await hash(env.PRIVACY_SALT+(req.headers.get('cf-connecting-ip')||'local'));
-      const synthetic=Boolean(env.TEST_TOKEN && req.headers.get('x-elyreon-test')===env.TEST_TOKEN);
+      const synthetic=b.test===true || Boolean(env.TEST_TOKEN && req.headers.get('x-elyreon-test')===env.TEST_TOKEN);
       await quota(env,`${synthetic?'enroll-test':'enroll'}:${ip}`,synthetic?20:5,3600); await quota(env,'global:enroll',100,86400);
       const token=`ely_${crypto.randomUUID().replaceAll('-','')}${crypto.randomUUID().replaceAll('-','')}`;
       const c={client_id:crypto.randomUUID(),source:sources.has(b.source)?b.source:'direct_api',campaign:typeof b.campaign==='string'?b.campaign.replace(/[^a-zA-Z0-9_.-]/g,'').slice(0,80):'',synthetic:Number(synthetic)};
       await env.DB.prepare('INSERT INTO phoenix_ac_client(token_hash,client_id,source,campaign,synthetic,created_at) VALUES(?,?,?,?,?,?)').bind(await hash(token),c.client_id,c.source,c.campaign,c.synthetic,Math.floor(Date.now()/1000)).run();
       await event(env,c,'TOKEN_ISSUED');
-      return json({token,client_id:c.client_id,free_calls_per_day:20,token_lifetime_days:30,source_evidence:'CLIENT_CLAIMED_UNVERIFIED',instructions:'Use Authorization: Bearer TOKEN and Idempotency-Key on POST /agents/check. Request body: {workflow: sanitized n8n export}.',mcp_url:`${u.origin}/agents/mcp`},201);
+      return json({token,client_id:c.client_id,free_calls_per_day:20,token_lifetime_days:30,synthetic:Boolean(c.synthetic),source_evidence:'CLIENT_CLAIMED_UNVERIFIED',instructions:'Use Authorization: Bearer TOKEN and Idempotency-Key on POST /agents/check. Request body: {workflow: sanitized n8n export}.',mcp_url:`${u.origin}/agents/mcp`},201);
     }
     if(path==='/agents/check' && req.method==='POST') { const c=await client(req,env); return json(await invoke(req,env,c,await body(req),req.headers.get('idempotency-key'))); }
     if(path==='/agents/paid') return json({enabled:false,candidate_price_usd:'0.01',blockers:['founder-approved price','verified receiving account and settlement flow','provider reconciliation','independent demand'],payment_required:false},503);

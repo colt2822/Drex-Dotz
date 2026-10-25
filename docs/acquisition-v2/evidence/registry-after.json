@@ -1,0 +1,197 @@
+{
+  "servers": [
+    {
+      "server": {
+        "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+        "name": "co.com.elyraon/payload-validator",
+        "description": "Deterministic JSON API payload validation with bounded JSON Schema and structured pass/fail errors.",
+        "title": "ELYREON Payload Validator",
+        "repository": {
+          "url": "https://github.com/colt2822/Drex-Decision-Gateway-for-Coding-Agents",
+          "source": "github",
+          "subfolder": "distribution/payload-validator"
+        },
+        "version": "1.0.0",
+        "websiteUrl": "https://elyreon-payload-validator.colt2822.workers.dev",
+        "remotes": [
+          {
+            "type": "streamable-http",
+            "url": "https://elyreon-payload-validator.colt2822.workers.dev/mcp",
+            "headers": [
+              {
+                "description": "Free token: POST https://elyreon-payload-validator.colt2822.workers.dev/trial with JSON {\"source\":\"mcp_registry\"}. Enter Bearer TOKEN.",
+                "isRequired": true,
+                "isSecret": true,
+                "name": "Authorization"
+              }
+            ]
+          }
+        ]
+      },
+      "_meta": {
+        "io.modelcontextprotocol.registry/official": {
+          "status": "active",
+          "statusChangedAt": "2026-10-25T04:27:11.280936Z",
+          "publishedAt": "2026-10-25T04:27:11.280936Z",
+          "updatedAt": "2026-10-25T04:27:11.280936Z",
+          "isLatest": false
+        }
+      }
+    },
+    {
+      "server": {
+        "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+        "name": "co.com.elyraon/payload-validator",
+        "description": "JSON Schema validator for API payloads via MCP: bounded checks and structured pass/fail errors.",
+        "title": "ELYREON JSON Schema Payload Validator",
+        "repository": {
+          "url": "https://github.com/colt2822/Drex-Decision-Gateway-for-Coding-Agents",
+          "source": "github",
+          "subfolder": "distribution/payload-validator"
+        },
+        "version": "1.0.1",
+        "websiteUrl": "https://elyreon-payload-validator.colt2822.workers.dev",
+        "remotes": [
+          {
+            "type": "streamable-http",
+            "url": "https://elyreon-payload-validator.colt2822.workers.dev/mcp",
+            "headers": [
+              {
+                "description": "Free token: POST https://elyreon-payload-validator.colt2822.workers.dev/trial with JSON {\"source\":\"mcp_registry\"}. Enter Bearer TOKEN.",
+                "isRequired": true,
+                "isSecret": true,
+                "name": "Authorization"
+              }
+            ]
+          }
+        ]
+      },
+      "_meta": {
+        "io.modelcontextprotocol.registry/official": {
+          "status": "active",
+          "statusChangedAt": "2026-10-25T05:12:43.024887Z",
+          "publishedAt": "2026-10-25T05:12:43.024887Z",
+          "updatedAt": "2026-10-25T05:12:43.024887Z",
+          "isLatest": true
+        }
+      }
+    },
+    {
+      "server": {
+        "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+        "name": "co.com.elyraon/workflow-rescue",
+        "description": "Free static n8n workflow validation: broken references, duplicate nodes and structured evidence.",
+        "title": "ELYREON Workflow Rescue",
+        "repository": {
+          "url": "https://github.com/colt2822/Drex-Dotz",
+          "source": "github",
+          "subfolder": "dotz/phoenix/commerce"
+        },
+        "version": "1.0.0",
+        "websiteUrl": "https://elyraon.com.co/agents/",
+        "remotes": [
+          {
+            "type": "streamable-http",
+            "url": "https://elyraon.com.co/agents/mcp",
+            "headers": [
+              {
+                "description": "Free token: POST https://elyraon.com.co/agents/trial with JSON {}. Enter Bearer TOKEN.",
+                "isRequired": true,
+                "isSecret": true,
+                "name": "Authorization"
+              }
+            ]
+          }
+        ]
+      },
+      "_meta": {
+        "io.modelcontextprotocol.registry/official": {
+          "status": "active",
+          "statusChangedAt": "2026-10-25T04:18:05.043136Z",
+          "publishedAt": "2026-10-25T04:18:05.043136Z",
+          "updatedAt": "2026-10-25T04:18:05.043136Z",
+          "isLatest": false
+        }
+      }
+    },
+    {
+      "server": {
+        "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+        "name": "co.com.elyraon/workflow-rescue",
+        "description": "Free static n8n workflow validation: broken references, duplicate nodes and structured evidence.",
+        "title": "ELYREON n8n Workflow Rescue",
+        "repository": {
+          "url": "https://github.com/colt2822/Drex-Dotz",
+          "source": "github",
+          "subfolder": "dotz/phoenix/commerce"
+        },
+        "version": "1.0.1",
+        "websiteUrl": "https://elyraon.com.co/agents/",
+        "remotes": [
+          {
+            "type": "streamable-http",
+            "url": "https://elyraon.com.co/agents/mcp",
+            "headers": [
+              {
+                "description": "Free token: POST https://elyraon.com.co/agents/trial with JSON {}. Enter Bearer TOKEN.",
+                "isRequired": true,
+                "isSecret": true,
+                "name": "Authorization"
+              }
+            ]
+          }
+        ]
+      },
+      "_meta": {
+        "io.modelcontextprotocol.registry/official": {
+          "status": "active",
+          "statusChangedAt": "2026-10-25T04:21:25.066619Z",
+          "publishedAt": "2026-10-25T04:21:25.066619Z",
+          "updatedAt": "2026-10-25T04:21:25.066619Z",
+          "isLatest": false
+        }
+      }
+    },
+    {
+      "server": {
+        "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+        "name": "co.com.elyraon/workflow-rescue",
+        "description": "Static n8n workflow validator: workflow errors and repair suggestions. No execution.",
+        "title": "ELYREON n8n Workflow Rescue",
+        "repository": {
+          "url": "https://github.com/colt2822/Drex-Dotz",
+          "source": "github",
+          "subfolder": "dotz/phoenix/commerce"
+        },
+        "version": "1.0.2",
+        "websiteUrl": "https://elyraon.com.co/agents/",
+        "remotes": [
+          {
+            "type": "streamable-http",
+            "url": "https://elyraon.com.co/agents/mcp",
+            "headers": [
+              {
+                "description": "Free token: POST https://elyraon.com.co/agents/trial with JSON {}. Enter Bearer TOKEN.",
+                "isRequired": true,
+                "isSecret": true,
+                "name": "Authorization"
+              }
+            ]
+          }
+        ]
+      },
+      "_meta": {
+        "io.modelcontextprotocol.registry/official": {
+          "status": "active",
+          "statusChangedAt": "2026-10-25T05:12:42.803248Z",
+          "publishedAt": "2026-10-25T05:12:42.803248Z",
+          "updatedAt": "2026-10-25T05:12:42.803248Z",
+          "isLatest": true
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "count": 5
+  }
+}

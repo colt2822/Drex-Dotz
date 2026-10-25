@@ -1,0 +1,136 @@
+{
+  "controlled": true,
+  "client_id": "d202c1d0-65b5-4b2d-9f73-6a78e79bbd69",
+  "results": [
+    {
+      "receipt_id": "f490d41d-d560-404b-b0e8-0d03a48ae2ce",
+      "tool": "check_n8n_workflow",
+      "version": "1.0.0",
+      "input_sha256": "a4f4573d4e35bba2ea6cc464a9de61b9ae8d6d10d81403484f683fb7a1e27ddd",
+      "structural_pass": true,
+      "report": {
+        "schema": "ELYREON_WORKFLOW_RESCUE_REPORT/1",
+        "workflowName": "(unnamed workflow)",
+        "schemaVariant": "root nodes + connections",
+        "summary": {
+          "nodeCount": 1,
+          "connectionCount": 0,
+          "triggerTypes": [
+            "n8n-nodes-base.manualTrigger"
+          ],
+          "nodeTypes": {
+            "n8n-nodes-base.manualTrigger": 1
+          },
+          "findingCounts": {
+            "CRITICAL": 0,
+            "HIGH": 0,
+            "MEDIUM": 0,
+            "LOW": 0,
+            "INFO": 1
+          }
+        },
+        "findings": [
+          {
+            "code": "RECOVERY_NOT_VISIBLE",
+            "title": "No explicit recovery path recognized",
+            "classification": "INSUFFICIENT_EVIDENCE",
+            "severity": "INFO",
+            "confidence": "LOW",
+            "affected": "Workflow",
+            "evidence": "No error-trigger node or connection output named error was recognized in the export.",
+            "why": "n8n workflow settings or external monitoring may handle failures outside this graph.",
+            "repair": "Confirm how failures are surfaced and recovered; consider an error workflow or alert if needed.",
+            "test": "Cause a safe test failure and verify an operator can detect and recover it."
+          }
+        ],
+        "checksPerformed": [
+          "export shape and supported schema",
+          "duplicate node names and IDs",
+          "connection source and target references",
+          "disconnected nodes and terminal branches",
+          "trigger candidates and disabled nodes",
+          "HTTP Request configuration cues",
+          "possible embedded secret patterns without repeating values",
+          "code-node and branch input assumptions",
+          "visible recovery and duplicate-processing cues"
+        ],
+        "limitations": [
+          "Static export analysis only; no workflow code or expressions were executed.",
+          "No runtime errors, API behavior, credentials, or external state were inspected.",
+          "Potential risks and insufficient-evidence findings require human review.",
+          "A finding's absence does not establish that a reliability control exists."
+        ]
+      },
+      "payment": {
+        "status": "NOT_PAID",
+        "charged_usd": 0
+      },
+      "replay": false
+    },
+    {
+      "receipt_id": "f9a2e9fc-4c45-4f42-a6ae-d4d7fab16e33",
+      "tool": "check_n8n_workflow",
+      "version": "1.0.0",
+      "input_sha256": "a4f4573d4e35bba2ea6cc464a9de61b9ae8d6d10d81403484f683fb7a1e27ddd",
+      "structural_pass": true,
+      "report": {
+        "schema": "ELYREON_WORKFLOW_RESCUE_REPORT/1",
+        "workflowName": "(unnamed workflow)",
+        "schemaVariant": "root nodes + connections",
+        "summary": {
+          "nodeCount": 1,
+          "connectionCount": 0,
+          "triggerTypes": [
+            "n8n-nodes-base.manualTrigger"
+          ],
+          "nodeTypes": {
+            "n8n-nodes-base.manualTrigger": 1
+          },
+          "findingCounts": {
+            "CRITICAL": 0,
+            "HIGH": 0,
+            "MEDIUM": 0,
+            "LOW": 0,
+            "INFO": 1
+          }
+        },
+        "findings": [
+          {
+            "code": "RECOVERY_NOT_VISIBLE",
+            "title": "No explicit recovery path recognized",
+            "classification": "INSUFFICIENT_EVIDENCE",
+            "severity": "INFO",
+            "confidence": "LOW",
+            "affected": "Workflow",
+            "evidence": "No error-trigger node or connection output named error was recognized in the export.",
+            "why": "n8n workflow settings or external monitoring may handle failures outside this graph.",
+            "repair": "Confirm how failures are surfaced and recovered; consider an error workflow or alert if needed.",
+            "test": "Cause a safe test failure and verify an operator can detect and recover it."
+          }
+        ],
+        "checksPerformed": [
+          "export shape and supported schema",
+          "duplicate node names and IDs",
+          "connection source and target references",
+          "disconnected nodes and terminal branches",
+          "trigger candidates and disabled nodes",
+          "HTTP Request configuration cues",
+          "possible embedded secret patterns without repeating values",
+          "code-node and branch input assumptions",
+          "visible recovery and duplicate-processing cues"
+        ],
+        "limitations": [
+          "Static export analysis only; no workflow code or expressions were executed.",
+          "No runtime errors, API behavior, credentials, or external state were inspected.",
+          "Potential risks and insufficient-evidence findings require human review.",
+          "A finding's absence does not establish that a reliability control exists."
+        ]
+      },
+      "payment": {
+        "status": "NOT_PAID",
+        "charged_usd": 0
+      },
+      "replay": false
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "workflow-rescue": {
+      "type": "remote",
+      "oauth": false,
+      "url": "https://elyraon.com.co/agents/mcp",
+      "headers": {
+        "Authorization": "Bearer REPLACE_WITH_WORKFLOW_RESCUE_TOKEN"
+      }
+    },
+    "payload-validator": {
+      "type": "remote",
+      "oauth": false,
+      "url": "https://elyreon-payload-validator.colt2822.workers.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer REPLACE_WITH_PAYLOAD_VALIDATOR_TOKEN"
+      }
+    }
+  }
+}
